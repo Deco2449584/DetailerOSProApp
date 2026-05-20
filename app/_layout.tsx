@@ -6,6 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from '@/context/AuthContext';
+
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignorar si el splash ya no está disponible (recargas en caliente).
 });
@@ -17,8 +19,10 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="light" />
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="light" />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
