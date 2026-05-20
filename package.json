@@ -4,7 +4,11 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "start:clear": "expo start -c",
+    "start:tunnel": "expo start --tunnel",
     "android": "expo start --android",
+    "android:localhost": "expo start --android --localhost",
+    "dev:android": "powershell -ExecutionPolicy Bypass -File ./scripts/android-usb.ps1",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint"
