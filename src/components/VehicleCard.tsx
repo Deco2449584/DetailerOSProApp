@@ -1,37 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Vehicle, VehicleStatus, VehicleType } from '@/types';
+import type { Vehicle } from '@/types';
 import { colors } from '@/theme/colors';
 import { formatVehicleDate } from '@/utils/formatDate';
+import { STATUS_COLORS, STATUS_LABELS, TYPE_COLORS, TYPE_LABELS } from '@/utils/vehicleLabels';
 
 type VehicleCardProps = {
   vehicle: Vehicle;
-};
-
-const STATUS_LABELS: Record<VehicleStatus, string> = {
-  pendiente: 'Pendiente',
-  en_proceso: 'En proceso',
-  completado: 'Completado',
-  entregado: 'Entregado',
-};
-
-const TYPE_LABELS: Record<VehicleType, string> = {
-  nuevo: 'Nuevo',
-  usado: 'Usado',
-  redetailing: 'Redetailing',
-};
-
-const STATUS_COLORS: Record<VehicleStatus, { bg: string; text: string }> = {
-  pendiente: { bg: '#FEF3C7', text: '#92400E' },
-  en_proceso: { bg: '#DBEAFE', text: '#1E40AF' },
-  completado: { bg: '#D1FAE5', text: '#065F46' },
-  entregado: { bg: '#E5E7EB', text: '#374151' },
-};
-
-const TYPE_COLORS: Record<VehicleType, { bg: string; text: string }> = {
-  nuevo: { bg: '#E0F2FE', text: '#0369A1' },
-  usado: { bg: '#F3E8FF', text: '#6B21A8' },
-  redetailing: { bg: '#FFEDD5', text: '#9A3412' },
+  onPress?: () => void;
 };
 
 function Badge({
@@ -50,12 +26,15 @@ function Badge({
   );
 }
 
-export function VehicleCard({ vehicle }: VehicleCardProps) {
+export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
   const statusStyle = STATUS_COLORS[vehicle.status];
   const typeStyle = TYPE_COLORS[vehicle.type];
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+      disabled={!onPress}>
       <View style={styles.main}>
         <Text style={styles.model}>{vehicle.model}</Text>
         <Text style={styles.vin}>VIN: {vehicle.vin}</Text>
@@ -79,8 +58,11 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
           ) : null}
         </View>
       </View>
-      <Text style={styles.date}>{formatVehicleDate(vehicle.createdAt)}</Text>
-    </View>
+      <View style={styles.trailing}>
+        <Text style={styles.date}>{formatVehicleDate(vehicle.createdAt)}</Text>
+        {onPress ? <Text style={styles.chevron}>›</Text> : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -98,6 +80,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+  },
+  cardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
   },
   main: {
     flex: 1,
@@ -129,11 +115,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  trailing: {
+    alignItems: 'flex-end',
+    gap: 6,
+    marginLeft: 12,
+  },
   date: {
     fontSize: 11,
     color: colors.text.onSurfaceMuted,
-    marginLeft: 12,
     textAlign: 'right',
     minWidth: 72,
+  },
+  chevron: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.text.onSurfaceMuted,
+    lineHeight: 24,
   },
 });

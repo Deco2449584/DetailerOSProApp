@@ -66,7 +66,14 @@ export default function DashboardScreen() {
       <FlatList
         data={vehicles}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <VehicleCard vehicle={item} />}
+        renderItem={({ item }) => (
+          <VehicleCard
+            vehicle={item}
+            onPress={() =>
+              router.push(`/vehicle/${encodeURIComponent(item.id)}` as Href)
+            }
+          />
+        )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
