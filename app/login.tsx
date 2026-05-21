@@ -1,3 +1,4 @@
+import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,11 +16,24 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export default function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, user, isLoading } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.accent.primary} />
+      </View>
+    );
+  }
+
+  if (user) {
+    return <Redirect href="/dashboard" />;
+  }
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
@@ -32,6 +46,7 @@ export default function LoginScreen() {
 
     try {
       await signIn(email, password);
+      router.replace('/dashboard');
     } catch {
       setError('Credenciales incorrectas o error de conexión.');
     } finally {
@@ -99,6 +114,12 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+  },
   safe: {
     flex: 1,
     backgroundColor: colors.background.primary,
