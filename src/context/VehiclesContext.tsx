@@ -10,11 +10,8 @@ import {
 } from 'react';
 
 import type { TeslaColor, TeslaModel, Vehicle, VehicleType } from '@/types';
-import { dummyVehicles } from '@/utils/dummyData';
 
 const STORAGE_KEY = '@detaileros/user-vehicles';
-
-const DUMMY_IDS = new Set(dummyVehicles.map((v) => v.id));
 
 export type NewVehicleInput = {
   vin: string;
@@ -43,15 +40,7 @@ function createVehicleId(vin: string): string {
   return `${vin}-${Date.now()}`;
 }
 
-function getUserVehicles(list: Vehicle[]): Vehicle[] {
-  return list.filter((v) => !DUMMY_IDS.has(v.id));
-}
-
-function mergeWithDummy(userVehicles: Vehicle[]): Vehicle[] {
-  return sortByNewest([...userVehicles, ...dummyVehicles]);
-}
-
-async function loadUserVehicles(): Promise<Vehicle[]> {
+async function loadVehicles(): Promise<Vehicle[]> {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
@@ -62,26 +51,25 @@ async function loadUserVehicles(): Promise<Vehicle[]> {
   }
 }
 
-async function persistUserVehicles(allVehicles: Vehicle[]): Promise<void> {
+async function persistVehicles(vehicles: Vehicle[]): Promise<void> {
   try {
-    const userOnly = getUserVehicles(allVehicles);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userOnly));
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
   } catch {
     // Native module or storage full: record remains in memory for this session.
   }
 }
 
 export function VehiclesProvider({ children }: { children: ReactNode }) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => mergeWithDummy([]));
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      const userVehicles = await loadUserVehicles();
+      const stored = await loadVehicles();
       if (!cancelled) {
-        setVehicles(mergeWithDummy(userVehicles));
+        setVehicles(sortByNewest(stored));
         setIsLoading(false);
       }
     })();
@@ -106,7 +94,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 
     setVehicles((prev) => {
       const next = [vehicle, ...prev];
-      void persistUserVehicles(next);
+      void persistVehicles(next);
       return next;
     });
 

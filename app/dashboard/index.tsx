@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { FineShineLogo } from '@/components/FineShineLogo';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
@@ -100,12 +102,23 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.statsRow}>
-              <StatCard title="New" value={counts.nuevo} accentColor={TYPE_ACCENTS.nuevo} />
-              <StatCard title="Used" value={counts.usado} accentColor={TYPE_ACCENTS.usado} />
+              <StatCard
+                title="New"
+                value={counts.nuevo}
+                accentColor={TYPE_ACCENTS.nuevo}
+                icon="sparkles-outline"
+              />
+              <StatCard
+                title="Used"
+                value={counts.usado}
+                accentColor={TYPE_ACCENTS.usado}
+                icon="car-outline"
+              />
               <StatCard
                 title="Redetailing"
                 value={counts.redetailing}
                 accentColor={TYPE_ACCENTS.redetailing}
+                icon="color-wand-outline"
               />
             </View>
 
@@ -119,8 +132,19 @@ export default function DashboardScreen() {
             </Pressable>
 
             <Text style={styles.sectionTitle}>Recent Records</Text>
-            <Text style={styles.sectionHint}>Tap a record to view details and photos</Text>
+            {vehicles.length > 0 ? (
+              <Text style={styles.sectionHint}>Tap a record to view details and photos</Text>
+            ) : null}
           </>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
+            <Text style={styles.emptyTitle}>No records yet</Text>
+            <Text style={styles.emptyHint}>
+              Scan a vehicle VIN to create your first inspection record.
+            </Text>
+          </View>
         }
         ListFooterComponent={<Text style={styles.footerLicense}>{brand.license}</Text>}
       />
@@ -224,6 +248,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.secondary,
     marginBottom: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   footerLicense: {
     fontFamily: fonts.body,
