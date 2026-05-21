@@ -11,7 +11,9 @@
     "dev:android": "powershell -ExecutionPolicy Bypass -File ./scripts/android-usb.ps1",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:android:apk": "eas build --platform android --profile preview",
+    "build:android:prod": "eas build --platform android --profile production"
   },
   "dependencies": {
     "@expo-google-fonts/oxanium": "^0.4.2",
