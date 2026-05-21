@@ -1,9 +1,9 @@
-# Conecta el teléfono por USB y reenvía el puerto de Metro al dispositivo.
-# Uso: npm run dev:android
+# Connect phone via USB and forward Metro port to the device.
+# Usage: npm run dev:android
 adb reverse tcp:8081 tcp:8081
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "adb no encontró un dispositivo. Activa depuración USB y acepta la autorización."
+  Write-Error "adb could not find a device. Enable USB debugging and accept the authorization prompt."
   exit 1
 }
-Write-Host "Puerto 8081 reenviado. Iniciando Expo en modo localhost..."
+Write-Host "Port 8081 forwarded. Starting Expo in localhost mode..."
 npx expo start --localhost

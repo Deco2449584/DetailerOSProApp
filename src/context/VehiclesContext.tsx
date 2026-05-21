@@ -67,7 +67,7 @@ async function persistUserVehicles(allVehicles: Vehicle[]): Promise<void> {
     const userOnly = getUserVehicles(allVehicles);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userOnly));
   } catch {
-    // Sin módulo nativo o almacenamiento lleno: el registro sigue en memoria esta sesión.
+    // Native module or storage full: record remains in memory for this session.
   }
 }
 
@@ -126,7 +126,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 export function useVehicles(): VehiclesContextValue {
   const context = useContext(VehiclesContext);
   if (!context) {
-    throw new Error('useVehicles debe usarse dentro de un VehiclesProvider');
+    throw new Error('useVehicles must be used within a VehiclesProvider');
   }
   return context;
 }

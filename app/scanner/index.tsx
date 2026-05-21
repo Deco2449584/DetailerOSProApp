@@ -23,15 +23,12 @@ import {
   type TeslaModel,
   type VehicleType,
 } from '@/types';
+import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
+import { fonts } from '@/theme/typography';
+import { TYPE_LABELS } from '@/utils/vehicleLabels';
 
 const VEHICLE_TYPES = ['nuevo', 'usado', 'redetailing'] as const;
-
-const TYPE_LABELS: Record<VehicleType, string> = {
-  nuevo: 'Nuevo',
-  usado: 'Usado',
-  redetailing: 'Redetailing',
-};
 
 export default function ScannerScreen() {
   const router = useRouter();
@@ -88,7 +85,7 @@ export default function ScannerScreen() {
       });
       router.replace('/dashboard' as Href);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el registro. Intenta de nuevo.');
+      Alert.alert('Error', 'Could not save the record. Please try again.');
       setIsSaving(false);
     }
   };
@@ -105,15 +102,15 @@ export default function ScannerScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.permissionBox}>
-          <Text style={styles.permissionTitle}>Permiso de cámara requerido</Text>
+          <Text style={styles.permissionTitle}>Camera permission required</Text>
           <Text style={styles.permissionText}>
-            Necesitamos acceso a la cámara para escanear el código QR del VIN.
+            We need camera access to scan the vehicle VIN QR code.
           </Text>
           <Pressable style={styles.primaryButton} onPress={requestPermission}>
-            <Text style={styles.primaryButtonText}>Conceder permiso</Text>
+            <Text style={styles.primaryButtonText}>Grant permission</Text>
           </Pressable>
           <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
-            <Text style={styles.secondaryButtonText}>Volver</Text>
+            <Text style={styles.secondaryButtonText}>Back</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -134,10 +131,12 @@ export default function ScannerScreen() {
           />
           <View style={styles.overlay}>
             <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← Volver</Text>
+              <Text style={styles.backButtonText}>← Back</Text>
             </Pressable>
-            <Text style={styles.scanTitle}>Escanear VIN (QR)</Text>
-            <Text style={styles.scanHint}>Apunta el recuadro al código QR del vehículo</Text>
+            <Text style={styles.scanTitle}>Scan VIN (QR)</Text>
+            <Text style={styles.scanHint}>
+              {brand.name} · Point at the vehicle QR code
+            </Text>
             <View style={styles.frameContainer}>
               <View style={styles.frame}>
                 <View style={[styles.corner, styles.cornerTL]} />
@@ -154,13 +153,13 @@ export default function ScannerScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <Pressable style={styles.backButtonForm} onPress={() => router.back()}>
-            <Text style={styles.backButtonFormText}>← Volver al panel</Text>
+            <Text style={styles.backButtonFormText}>← Back to panel</Text>
           </Pressable>
 
-          <Text style={styles.formTitle}>Inspección de vehículo</Text>
+          <Text style={styles.formTitle}>Vehicle inspection</Text>
 
           <View style={styles.vinBox}>
-            <Text style={styles.vinLabel}>VIN escaneado</Text>
+            <Text style={styles.vinLabel}>Scanned VIN</Text>
             <TextInput
               style={styles.vinInput}
               value={scannedVin}
@@ -170,10 +169,10 @@ export default function ScannerScreen() {
           </View>
 
           <View style={styles.formCard}>
-            <OptionGroup label="Modelo" options={TESLA_MODELS} value={model} onChange={setModel} />
+            <OptionGroup label="Model" options={TESLA_MODELS} value={model} onChange={setModel} />
 
             <OptionGroup
-              label="Tipo"
+              label="Type"
               options={VEHICLE_TYPES}
               value={type}
               onChange={setType}
@@ -181,19 +180,19 @@ export default function ScannerScreen() {
             />
 
             <OptionGroup
-              label="Color oficial Tesla"
+              label="Official Tesla colour"
               options={TESLA_COLORS}
               value={vehicleColor}
               onChange={setVehicleColor}
             />
 
             <View style={styles.field}>
-              <Text style={styles.fieldLabelDark}>Comentarios</Text>
+              <Text style={styles.fieldLabelDark}>Comments</Text>
             <TextInput
               style={styles.commentsInput}
               value={comments}
               onChangeText={setComments}
-              placeholder="Observaciones de la inspección..."
+              placeholder="Inspection notes..."
               placeholderTextColor={colors.text.onSurfaceMuted}
               multiline
               numberOfLines={4}
@@ -213,9 +212,9 @@ export default function ScannerScreen() {
             onPress={handleSave}
             disabled={isSaving}>
             {isSaving ? (
-              <ActivityIndicator color={colors.text.onSurface} />
+              <ActivityIndicator color={colors.text.onAccent} />
             ) : (
-              <Text style={styles.primaryButtonText}>Guardar y Continuar</Text>
+              <Text style={styles.primaryButtonText}>Save & Continue</Text>
             )}
           </Pressable>
 
@@ -225,7 +224,7 @@ export default function ScannerScreen() {
               pressed && styles.secondaryButtonPressed,
             ]}
             onPress={handleScanAgain}>
-            <Text style={styles.secondaryButtonText}>Escanear de nuevo</Text>
+            <Text style={styles.secondaryButtonText}>Scan again</Text>
           </Pressable>
         </ScrollView>
       ) : null}
@@ -271,8 +270,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scanTitle: {
+    fontFamily: fonts.heading,
     fontSize: 22,
-    fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 8,
   },
@@ -420,9 +419,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.text.onSurface,
+    color: colors.text.onAccent,
   },
   secondaryButton: {
     borderRadius: 12,

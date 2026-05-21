@@ -1,37 +1,39 @@
 /**
- * Paleta corporativa — app industrial / automotriz (Detaileros Pro).
- * Fondos oscuros, superficies claras y acento de alta visibilidad para CTAs.
+ * Fine Shine palette — https://fineshine.com.au/
+ * Corporate black, action red (#e21f28), and light surfaces.
  */
 export const colors = {
   background: {
-    primary: '#1A1D23',
-    secondary: '#252A33',
+    primary: '#000000',
+    secondary: '#141414',
   },
   surface: {
-    default: '#F4F6F8',
+    default: '#F3F3F3',
     elevated: '#FFFFFF',
-    muted: '#E2E6EB',
+    muted: '#E8E8E8',
   },
   text: {
-    primary: '#F4F6F8',
-    secondary: '#9CA3AF',
-    onSurface: '#1A1D23',
-    onSurfaceMuted: '#6B7280',
+    primary: '#FFFFFF',
+    secondary: '#B8B8B8',
+    onSurface: '#3D3D3D',
+    onSurfaceMuted: '#6B6B6B',
+    onAccent: '#FFFFFF',
   },
   accent: {
-    primary: '#00B4FF',
-    primaryPressed: '#0090CC',
-    secondary: '#22C55E',
-    secondaryPressed: '#16A34A',
+    primary: '#E21F28',
+    primaryPressed: '#B81820',
+    secondary: '#000000',
+    secondaryPressed: '#2A2A2A',
   },
   border: {
-    default: '#374151',
+    default: '#333333',
     onSurface: '#D1D5DB',
+    brand: '#000000',
   },
   semantic: {
     success: '#22C55E',
     warning: '#F59E0B',
-    error: '#EF4444',
+    error: '#E21F28',
     info: '#3B82F6',
   },
 } as const;

@@ -16,8 +16,8 @@ async function ensureCameraPermission(): Promise<boolean> {
   const requested = await ImagePicker.requestCameraPermissionsAsync();
   if (!requested.granted) {
     Alert.alert(
-      'Permiso de cámara',
-      'Necesitamos acceso a la cámara para tomar evidencias fotográficas.',
+      'Camera permission',
+      'We need camera access to capture photo evidence.',
     );
     return false;
   }
@@ -31,8 +31,8 @@ async function ensureLibraryPermission(): Promise<boolean> {
   const requested = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!requested.granted) {
     Alert.alert(
-      'Permiso de galería',
-      'Necesitamos acceso a la galería para seleccionar evidencias fotográficas.',
+      'Photo library permission',
+      'We need photo library access to select photo evidence.',
     );
     return false;
   }
@@ -82,14 +82,14 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Evidencias fotográficas</Text>
-      <Text style={styles.hint}>Toma o selecciona fotos del estado del vehículo</Text>
+      <Text style={styles.label}>Photo evidence</Text>
+      <Text style={styles.hint}>Take or select photos of the vehicle condition</Text>
 
       <View style={styles.actions}>
         <Pressable
           style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
           onPress={handleTakePhoto}>
-          <Text style={styles.actionButtonText}>Tomar foto</Text>
+          <Text style={styles.actionButtonText}>Take photo</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [
@@ -98,7 +98,7 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
             pressed && styles.actionButtonPressed,
           ]}
           onPress={handlePickFromGallery}>
-          <Text style={styles.actionButtonTextSecondary}>Galería</Text>
+          <Text style={styles.actionButtonTextSecondary}>Gallery</Text>
         </Pressable>
       </View>
 
@@ -117,7 +117,7 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
           ))}
         </ScrollView>
       ) : (
-        <Text style={styles.empty}>Sin fotos aún</Text>
+        <Text style={styles.empty}>No photos yet</Text>
       )}
     </View>
   );
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text.onSurface,
+    color: colors.text.onAccent,
   },
   actionButtonTextSecondary: {
     fontSize: 14,

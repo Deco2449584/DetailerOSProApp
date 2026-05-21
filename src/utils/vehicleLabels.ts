@@ -1,15 +1,15 @@
 import type { VehicleStatus, VehicleType } from '@/types';
 
 export const STATUS_LABELS: Record<VehicleStatus, string> = {
-  pendiente: 'Pendiente',
-  en_proceso: 'En proceso',
-  completado: 'Completado',
-  entregado: 'Entregado',
+  pendiente: 'Pending',
+  en_proceso: 'In Progress',
+  completado: 'Completed',
+  entregado: 'Delivered',
 };
 
 export const TYPE_LABELS: Record<VehicleType, string> = {
-  nuevo: 'Nuevo',
-  usado: 'Usado',
+  nuevo: 'New',
+  usado: 'Used',
   redetailing: 'Redetailing',
 };
 

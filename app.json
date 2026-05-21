@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "detailerospro",
-    "slug": "detailerospro",
+    "name": "Fine Shine",
+    "slug": "fineshine-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "detailerospro",
+    "scheme": "fineshine",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -29,14 +29,14 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Permite a Detaileros Pro acceder a la cámara para escanear el VIN del vehículo."
+          "cameraPermission": "Allow Fine Shine to access the camera to scan the vehicle VIN."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permite a Detaileros Pro acceder a la galería para adjuntar evidencias fotográficas.",
-          "cameraPermission": "Permite a Detaileros Pro usar la cámara para tomar evidencias fotográficas."
+          "photosPermission": "Allow Fine Shine to access your photo library to attach photo evidence.",
+          "cameraPermission": "Allow Fine Shine to use the camera to capture photo evidence."
         }
       ],
       "expo-router",
@@ -46,12 +46,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#1A1D23",
+          "backgroundColor": "#000000",
           "dark": {
-            "backgroundColor": "#1A1D23"
+            "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

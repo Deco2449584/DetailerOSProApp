@@ -51,7 +51,7 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
           />
           {vehicle.imagesUrls.length > 0 ? (
             <Badge
-              label={`${vehicle.imagesUrls.length} foto${vehicle.imagesUrls.length === 1 ? '' : 's'}`}
+              label={`${vehicle.imagesUrls.length} photo${vehicle.imagesUrls.length === 1 ? '' : 's'}`}
               backgroundColor="#E5E7EB"
               textColor="#374151"
             />

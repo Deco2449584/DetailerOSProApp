@@ -13,7 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useVehicles } from '@/context/VehiclesContext';
+import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
+import { fonts } from '@/theme/typography';
 import { formatVehicleDate } from '@/utils/formatDate';
 import { STATUS_COLORS, STATUS_LABELS, TYPE_COLORS, TYPE_LABELS } from '@/utils/vehicleLabels';
 
@@ -67,9 +69,9 @@ export default function VehicleDetailScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Registro no encontrado</Text>
+          <Text style={styles.notFoundTitle}>Record not found</Text>
           <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>← Volver al panel</Text>
+            <Text style={styles.backBtnText}>← Back to panel</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -85,11 +87,11 @@ export default function VehicleDetailScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         <Pressable style={styles.backLink} onPress={() => router.back()}>
-          <Text style={styles.backLinkText}>← Volver al panel</Text>
+          <Text style={styles.backLinkText}>← Back to panel</Text>
         </Pressable>
 
         <Text style={styles.title}>{vehicle.model}</Text>
-        <Text style={styles.subtitle}>Detalle del vehículo</Text>
+        <Text style={styles.subtitle}>{brand.name} · Vehicle details</Text>
 
         <View style={styles.badges}>
           <Badge
@@ -106,23 +108,23 @@ export default function VehicleDetailScreen() {
 
         <View style={styles.card}>
           <DetailRow label="VIN" value={vehicle.vin} />
-          <DetailRow label="Modelo" value={vehicle.model} />
-          <DetailRow label="Tipo" value={TYPE_LABELS[vehicle.type]} />
-          <DetailRow label="Estado" value={STATUS_LABELS[vehicle.status]} />
-          <DetailRow label="Color" value={vehicle.color} />
-          <DetailRow label="Registrado" value={formatVehicleDate(vehicle.createdAt)} />
+          <DetailRow label="Model" value={vehicle.model} />
+          <DetailRow label="Type" value={TYPE_LABELS[vehicle.type]} />
+          <DetailRow label="Status" value={STATUS_LABELS[vehicle.status]} />
+          <DetailRow label="Colour" value={vehicle.color} />
+          <DetailRow label="Registered" value={formatVehicleDate(vehicle.createdAt)} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionLabel}>Comentarios</Text>
+          <Text style={styles.sectionLabel}>Comments</Text>
           <Text style={styles.comments}>
-            {vehicle.comments.trim() || 'Sin comentarios registrados.'}
+            {vehicle.comments.trim() || 'No comments recorded.'}
           </Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>
-            Evidencias fotográficas ({vehicle.imagesUrls.length})
+            Photo evidence ({vehicle.imagesUrls.length})
           </Text>
           {vehicle.imagesUrls.length > 0 ? (
             <ScrollView
@@ -139,7 +141,7 @@ export default function VehicleDetailScreen() {
               ))}
             </ScrollView>
           ) : (
-            <Text style={styles.noPhotos}>No hay fotos adjuntas a este registro.</Text>
+            <Text style={styles.noPhotos}>No photos attached to this record.</Text>
           )}
         </View>
       </ScrollView>
@@ -174,8 +176,8 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
   },
   title: {
+    fontFamily: fonts.heading,
     fontSize: 28,
-    fontWeight: '700',
     color: colors.text.primary,
   },
   subtitle: {

@@ -12,8 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FineShineLogo } from '@/components/FineShineLogo';
 import { useAuth } from '@/context/AuthContext';
+import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
+import { fonts } from '@/theme/typography';
 
 export default function LoginScreen() {
   const { signIn, user, isLoading } = useAuth();
@@ -37,7 +40,7 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
-      setError('Introduce correo y contraseña.');
+      setError('Please enter your email and password.');
       return;
     }
 
@@ -48,7 +51,7 @@ export default function LoginScreen() {
       await signIn(email, password);
       router.replace('/dashboard');
     } catch {
-      setError('Credenciales incorrectas o error de conexión.');
+      setError('Invalid credentials or connection error.');
     } finally {
       setIsSubmitting(false);
     }
@@ -61,17 +64,18 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.brand}>Detaileros Pro</Text>
-            <Text style={styles.subtitle}>Acceso al panel de operaciones</Text>
+            <FineShineLogo width={220} />
+            <Text style={styles.tagline}>{brand.tagline}</Text>
+            <Text style={styles.subtitle}>{brand.panelTitle}</Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.label}>Correo</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="tu@empresa.com"
+              placeholder="tu@fineshine.com.au"
               placeholderTextColor={colors.text.onSurfaceMuted}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -79,7 +83,7 @@ export default function LoginScreen() {
               editable={!isSubmitting}
             />
 
-            <Text style={styles.label}>Contraseña</Text>
+            <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
               value={password}
@@ -101,12 +105,14 @@ export default function LoginScreen() {
               onPress={handleSignIn}
               disabled={isSubmitting}>
               {isSubmitting ? (
-                <ActivityIndicator color={colors.text.onSurface} />
+                <ActivityIndicator color={colors.text.onAccent} />
               ) : (
-                <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                <Text style={styles.buttonText}>Sign In</Text>
               )}
             </Pressable>
           </View>
+
+          <Text style={styles.license}>{brand.license}</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -131,29 +137,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    gap: 32,
+    gap: 28,
   },
   header: {
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
   },
-  brand: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text.primary,
+  tagline: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.text.secondary,
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: colors.surface.elevated,
     borderRadius: 16,
     padding: 24,
     gap: 12,
+    borderTopWidth: 4,
+    borderTopColor: colors.accent.primary,
   },
   label: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
     color: colors.text.onSurface,
     marginTop: 4,
   },
@@ -165,10 +177,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    fontFamily: fonts.body,
     color: colors.text.onSurface,
   },
   error: {
     color: colors.semantic.error,
+    fontFamily: fonts.body,
     fontSize: 14,
     marginTop: 4,
   },
@@ -186,8 +200,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.text.onSurface,
+    color: colors.text.onAccent,
+    letterSpacing: 0.5,
+  },
+  license: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FineShineLogo } from '@/components/FineShineLogo';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
 import { useVehicles } from '@/context/VehiclesContext';
 import type { Vehicle, VehicleType } from '@/types';
+import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
+import { fonts } from '@/theme/typography';
 
 const TYPE_ACCENTS: Record<VehicleType, string> = {
   nuevo: colors.accent.primary,
@@ -55,7 +58,7 @@ export default function DashboardScreen() {
     return <Redirect href="/login" />;
   }
 
-  const greetingName = user.email?.split('@')[0] ?? 'Operador';
+  const greetingName = user.email?.split('@')[0] ?? 'Operator';
 
   const handleStartScan = () => {
     router.push('/scanner' as Href);
@@ -78,21 +81,27 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
+            <View style={styles.brandRow}>
+              <FineShineLogo width={140} style={styles.headerLogo} />
+            </View>
+
             <View style={styles.header}>
               <View style={styles.headerText}>
-                <Text style={styles.greeting}>Hola, {greetingName}</Text>
-                <Text style={styles.headerSubtitle}>Panel de operaciones Tesla</Text>
+                <Text style={styles.greeting}>Hi, {greetingName}</Text>
+                <Text style={styles.headerSubtitle}>
+                  {brand.panelTitle} · {brand.location}
+                </Text>
               </View>
               <Pressable
                 style={({ pressed }) => [styles.signOutBtn, pressed && styles.signOutPressed]}
                 onPress={signOut}>
-                <Text style={styles.signOutText}>Cerrar Sesión</Text>
+                <Text style={styles.signOutText}>Sign Out</Text>
               </Pressable>
             </View>
 
             <View style={styles.statsRow}>
-              <StatCard title="Nuevos" value={counts.nuevo} accentColor={TYPE_ACCENTS.nuevo} />
-              <StatCard title="Usados" value={counts.usado} accentColor={TYPE_ACCENTS.usado} />
+              <StatCard title="New" value={counts.nuevo} accentColor={TYPE_ACCENTS.nuevo} />
+              <StatCard title="Used" value={counts.usado} accentColor={TYPE_ACCENTS.usado} />
               <StatCard
                 title="Redetailing"
                 value={counts.redetailing}
@@ -106,12 +115,14 @@ export default function DashboardScreen() {
                 pressed && styles.scanButtonPressed,
               ]}
               onPress={handleStartScan}>
-              <Text style={styles.scanButtonText}>Iniciar Escaneo (Leer VIN)</Text>
+              <Text style={styles.scanButtonText}>Start Scan (Read VIN)</Text>
             </Pressable>
 
-            <Text style={styles.sectionTitle}>Registros Recientes</Text>
+            <Text style={styles.sectionTitle}>Recent Records</Text>
+            <Text style={styles.sectionHint}>Tap a record to view details and photos</Text>
           </>
         }
+        ListFooterComponent={<Text style={styles.footerLicense}>{brand.license}</Text>}
       />
     </SafeAreaView>
   );
@@ -132,11 +143,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
+  brandRow: {
+    alignItems: 'flex-start',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  headerLogo: {
+    alignItems: 'flex-start',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginTop: 8,
     marginBottom: 24,
     gap: 12,
   },
@@ -145,11 +163,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   greeting: {
+    fontFamily: fonts.heading,
     fontSize: 24,
-    fontWeight: '700',
     color: colors.text.primary,
   },
   headerSubtitle: {
+    fontFamily: fonts.body,
     fontSize: 14,
     color: colors.text.secondary,
   },
@@ -189,15 +208,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent.primaryPressed,
   },
   scanButtonText: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 17,
-    fontWeight: '700',
-    color: colors.text.onSurface,
+    color: colors.text.onAccent,
     letterSpacing: 0.3,
   },
   sectionTitle: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 18,
-    fontWeight: '700',
     color: colors.text.primary,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.text.secondary,
     marginBottom: 12,
+  },
+  footerLicense: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 20,
+    lineHeight: 16,
   },
 });
