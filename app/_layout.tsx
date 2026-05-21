@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/AuthContext';
+import { VehiclesProvider } from '@/context/VehiclesContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignorar si el splash ya no está disponible (recargas en caliente).
@@ -20,8 +21,10 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style="light" />
+        <VehiclesProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+          <StatusBar style="light" />
+        </VehiclesProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

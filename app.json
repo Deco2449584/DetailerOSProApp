@@ -32,6 +32,13 @@
           "cameraPermission": "Permite a Detaileros Pro acceder a la cámara para escanear el VIN del vehículo."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite a Detaileros Pro acceder a la galería para adjuntar evidencias fotográficas.",
+          "cameraPermission": "Permite a Detaileros Pro usar la cámara para tomar evidencias fotográficas."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

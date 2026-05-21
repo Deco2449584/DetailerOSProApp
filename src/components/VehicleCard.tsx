@@ -70,6 +70,13 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
             backgroundColor={typeStyle.bg}
             textColor={typeStyle.text}
           />
+          {vehicle.imagesUrls.length > 0 ? (
+            <Badge
+              label={`${vehicle.imagesUrls.length} foto${vehicle.imagesUrls.length === 1 ? '' : 's'}`}
+              backgroundColor="#E5E7EB"
+              textColor="#374151"
+            />
+          ) : null}
         </View>
       </View>
       <Text style={styles.date}>{formatVehicleDate(vehicle.createdAt)}</Text>

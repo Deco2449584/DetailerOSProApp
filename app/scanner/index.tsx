@@ -1,8 +1,9 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EvidencePhotosField } from '@/components/EvidencePhotosField';
 import { OptionGroup } from '@/components/OptionGroup';
+import { useVehicles } from '@/context/VehiclesContext';
 import {
   TESLA_COLORS,
   TESLA_MODELS,
@@ -32,15 +35,18 @@ const TYPE_LABELS: Record<VehicleType, string> = {
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const { addVehicle } = useVehicles();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [isScanning, setIsScanning] = useState(true);
   const [scannedVin, setScannedVin] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [model, setModel] = useState<TeslaModel>('Model 3');
   const [type, setType] = useState<VehicleType>('nuevo');
   const [vehicleColor, setVehicleColor] = useState<TeslaColor>('Pearl White Multi-Coat');
   const [comments, setComments] = useState('');
+  const [evidencePhotos, setEvidencePhotos] = useState<string[]>([]);
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -64,16 +70,27 @@ export default function ScannerScreen() {
     setType('nuevo');
     setVehicleColor('Pearl White Multi-Coat');
     setComments('');
+    setEvidencePhotos([]);
   };
 
-  const handleSave = () => {
-    console.log({
-      vin: scannedVin,
-      model,
-      type,
-      color: vehicleColor,
-      comments,
-    });
+  const handleSave = async () => {
+    if (!scannedVin?.trim() || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await addVehicle({
+        vin: scannedVin.trim(),
+        model,
+        type,
+        color: vehicleColor,
+        comments,
+        imagesUrls: evidencePhotos,
+      });
+      router.replace('/dashboard' as Href);
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar el registro. Intenta de nuevo.');
+      setIsSaving(false);
+    }
   };
 
   if (!permission) {
@@ -183,12 +200,23 @@ export default function ScannerScreen() {
               textAlignVertical="top"
             />
             </View>
+
+            <EvidencePhotosField photos={evidencePhotos} onChange={setEvidencePhotos} />
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
-            onPress={handleSave}>
-            <Text style={styles.primaryButtonText}>Guardar y Continuar</Text>
+            style={({ pressed }) => [
+              styles.primaryButton,
+              (pressed || isSaving) && styles.primaryButtonPressed,
+              isSaving && styles.primaryButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}>
+            {isSaving ? (
+              <ActivityIndicator color={colors.text.onSurface} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Guardar y Continuar</Text>
+            )}
           </Pressable>
 
           <Pressable
@@ -387,6 +415,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonPressed: {
     backgroundColor: colors.accent.primaryPressed,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     fontSize: 16,

@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
+import { useVehicles } from '@/context/VehiclesContext';
 import type { Vehicle, VehicleType } from '@/types';
 import { colors } from '@/theme/colors';
-import { dummyVehicles } from '@/utils/dummyData';
 
 const TYPE_ACCENTS: Record<VehicleType, string> = {
   nuevo: colors.accent.primary,
@@ -29,16 +29,19 @@ function countByType(vehicles: Vehicle[], type: VehicleType): number {
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { vehicles, isLoading: vehiclesLoading } = useVehicles();
 
   const counts = useMemo(
     () => ({
-      nuevo: countByType(dummyVehicles, 'nuevo'),
-      usado: countByType(dummyVehicles, 'usado'),
-      redetailing: countByType(dummyVehicles, 'redetailing'),
+      nuevo: countByType(vehicles, 'nuevo'),
+      usado: countByType(vehicles, 'usado'),
+      redetailing: countByType(vehicles, 'redetailing'),
     }),
-    [],
+    [vehicles],
   );
+
+  const isLoading = authLoading || vehiclesLoading;
 
   if (isLoading) {
     return (
@@ -61,7 +64,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <FlatList
-        data={dummyVehicles}
+        data={vehicles}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <VehicleCard vehicle={item} />}
         contentContainerStyle={styles.listContent}
