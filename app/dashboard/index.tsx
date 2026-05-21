@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -28,6 +28,7 @@ function countByType(vehicles: Vehicle[], type: VehicleType): number {
 }
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const { user, isLoading, signOut } = useAuth();
 
   const counts = useMemo(
@@ -54,7 +55,7 @@ export default function DashboardScreen() {
   const greetingName = user.email?.split('@')[0] ?? 'Operador';
 
   const handleStartScan = () => {
-    console.log('Navegar al escáner');
+    router.push('/scanner' as Href);
   };
 
   return (
