@@ -18,9 +18,21 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
 };
 
-const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const isFirebaseConfigured = Object.values(firebaseConfig).every(
+  (value) => value.length > 0,
+);
 
-function createAuth(): Auth {
+function createFirebaseApp(): FirebaseApp {
+  if (!isFirebaseConfigured) {
+    throw new Error(
+      'Firebase is not configured. Set EXPO_PUBLIC_FIREBASE_* variables for EAS builds (eas env:push).',
+    );
+  }
+
+  return getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+}
+
+function createAuth(app: FirebaseApp): Auth {
   try {
     return initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
@@ -34,6 +46,19 @@ function createAuth(): Auth {
   }
 }
 
-export const auth: Auth = createAuth();
-export const db: Firestore = getFirestore(app);
-export const storage: FirebaseStorage = getStorage(app);
+let app: FirebaseApp | null = null;
+let authInstance: Auth | null = null;
+let dbInstance: Firestore | null = null;
+let storageInstance: FirebaseStorage | null = null;
+
+if (isFirebaseConfigured) {
+  app = createFirebaseApp();
+  authInstance = createAuth(app);
+  dbInstance = getFirestore(app);
+  storageInstance = getStorage(app);
+}
+
+export { app };
+export const auth: Auth | null = authInstance;
+export const db: Firestore | null = dbInstance;
+export const storage: FirebaseStorage | null = storageInstance;

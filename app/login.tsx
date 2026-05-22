@@ -19,7 +19,7 @@ import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
 
 export default function LoginScreen() {
-  const { signIn, user, isLoading } = useAuth();
+  const { signIn, user, isLoading, isConfigured } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -94,6 +94,12 @@ export default function LoginScreen() {
               editable={!isSubmitting}
             />
 
+            {!isConfigured ? (
+              <Text style={styles.error}>
+                Firebase is not configured in this build. Contact support.
+              </Text>
+            ) : null}
+
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Pressable
@@ -103,7 +109,7 @@ export default function LoginScreen() {
                 isSubmitting && styles.buttonDisabled,
               ]}
               onPress={handleSignIn}
-              disabled={isSubmitting}>
+              disabled={isSubmitting || !isConfigured}>
               {isSubmitting ? (
                 <ActivityIndicator color={colors.text.onAccent} />
               ) : (

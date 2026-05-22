@@ -14,11 +14,12 @@ import {
   type ReactNode,
 } from 'react';
 
-import { auth } from '@/services/firebaseConfig';
+import { auth, isFirebaseConfigured } from '@/services/firebaseConfig';
 
 type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
+  isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -30,6 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isFirebaseConfigured || !auth) {
+      setIsLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setIsLoading(false);
@@ -39,15 +45,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Firebase is not configured for this build.');
+    }
     await signInWithEmailAndPassword(auth, email.trim(), password);
   }, []);
 
   const signOut = useCallback(async () => {
+    if (!auth) return;
     await firebaseSignOut(auth);
   }, []);
 
   const value = useMemo(
-    () => ({ user, isLoading, signIn, signOut }),
+    () => ({
+      user,
+      isLoading,
+      isConfigured: isFirebaseConfigured,
+      signIn,
+      signOut,
+    }),
     [user, isLoading, signIn, signOut],
   );
 
