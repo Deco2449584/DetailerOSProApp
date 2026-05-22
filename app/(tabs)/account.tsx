@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Linking from 'expo-linking';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -19,69 +19,91 @@ export default function AccountScreen() {
   const { user, role, isAdmin, profileSyncFailed, signOut } = useAuth();
   const emailMatchesAdminList = isAdminEmail(user?.email);
   const adminEmailsConfigured = getConfiguredAdminEmails().length > 0;
-  const router = useRouter();
+
+  const openSupport = async () => {
+    const url = brand.website;
+    const canOpen = await Linking.canOpenURL(url);
+    if (!canOpen) {
+      Alert.alert('Support', `Call ${brand.phone} or visit fineshine.com.au`);
+      return;
+    }
+    await Linking.openURL(url);
+  };
+
+  const callSupport = () => {
+    Linking.openURL(`tel:${brand.phone.replace(/\s/g, '')}`);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <View style={styles.content}>
-        <FineShineLogo width={160} />
-        <Text style={styles.title}>Account</Text>
-        <Text style={styles.subtitle}>{brand.panelTitle}</Text>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.centerBlock}>
+          <FineShineLogo width={160} />
+          <Text style={styles.title}>Account</Text>
+          <Text style={styles.subtitle}>{brand.panelTitle}</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{user?.email ?? '—'}</Text>
+          <View style={styles.card}>
+            <Text style={styles.label}>Email</Text>
+            <Text style={styles.value}>{user?.email ?? '—'}</Text>
 
-          <Text style={styles.label}>Role</Text>
-          <View style={styles.roleRow}>
-            <Ionicons
-              name={isAdmin ? 'shield-checkmark' : 'person-circle-outline'}
-              size={18}
-              color={isAdmin ? colors.accent.primary : colors.text.onSurfaceMuted}
-            />
-            <Text style={[styles.value, isAdmin && styles.valueAdmin]}>
-              {getRoleLabel(role)}
-            </Text>
+            <Text style={styles.label}>Role</Text>
+            <View style={styles.roleRow}>
+              <Ionicons
+                name={isAdmin ? 'shield-checkmark' : 'person-circle-outline'}
+                size={18}
+                color={isAdmin ? colors.accent.primary : colors.text.onSurfaceMuted}
+              />
+              <Text style={[styles.value, isAdmin && styles.valueAdmin]}>
+                {getRoleLabel(role)}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {profileSyncFailed ? (
-          <Text style={styles.hintWarn}>
-            Could not sync your profile to Firestore. Admin access still works if your email is
-            listed in EXPO_PUBLIC_ADMIN_EMAILS. Publish rules from firebase/firestore.rules.
-          </Text>
-        ) : null}
+          {profileSyncFailed ? (
+            <Text style={styles.hintWarn}>
+              Could not sync your profile to Firestore. Publish rules from firebase/firestore.rules.
+            </Text>
+          ) : null}
 
-        {!isAdmin && emailMatchesAdminList && adminEmailsConfigured ? (
-          <Text style={styles.hintWarn}>
-            Your email is in the admin list. Restart the app with: npm run start:clear
-          </Text>
-        ) : null}
+          {!isAdmin && emailMatchesAdminList && adminEmailsConfigured ? (
+            <Text style={styles.hintWarn}>
+              Your email is in the admin list. Restart with: npm run start:clear
+            </Text>
+          ) : null}
 
-        {!adminEmailsConfigured ? (
-          <Text style={styles.hintWarn}>
-            EXPO_PUBLIC_ADMIN_EMAILS is empty in .env. Add your email and run npm run start:clear
-          </Text>
-        ) : null}
-
-        {isAdmin ? (
           <Pressable
-            style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
-            onPress={() => router.push('/(tabs)/admin')}>
-            <Ionicons name="download-outline" size={20} color={colors.accent.primary} />
-            <Text style={styles.linkBtnText}>Open admin exports</Text>
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+            onPress={openSupport}>
+            <Ionicons name="help-circle-outline" size={22} color={colors.accent.primary} />
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Help & support</Text>
+              <Text style={styles.actionHint}>{brand.website}</Text>
+            </View>
+            <Ionicons name="open-outline" size={18} color={colors.text.onSurfaceMuted} />
           </Pressable>
-        ) : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.signOutBtn, pressed && styles.signOutPressed]}
-          onPress={signOut}>
-          <Ionicons name="log-out-outline" size={20} color={colors.semantic.error} />
-          <Text style={styles.signOutText}>Sign out</Text>
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+            onPress={callSupport}>
+            <Ionicons name="call-outline" size={22} color={colors.accent.primary} />
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Call Fine Shine</Text>
+              <Text style={styles.actionHint}>{brand.phone}</Text>
+            </View>
+          </Pressable>
 
-        <Text style={styles.footer}>{brand.license}</Text>
-      </View>
+          <Pressable
+            style={({ pressed }) => [styles.signOutBtn, pressed && styles.signOutPressed]}
+            onPress={signOut}>
+            <Ionicons name="log-out-outline" size={20} color={colors.semantic.error} />
+            <Text style={styles.signOutText}>Sign out</Text>
+          </Pressable>
+
+          <Text style={styles.footer}>{brand.license}</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -91,10 +113,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
-  content: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
     padding: 20,
+    justifyContent: 'center',
+  },
+  centerBlock: {
+    alignItems: 'center',
     gap: 12,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   title: {
     fontFamily: fonts.heading,
@@ -106,9 +135,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     color: colors.text.secondary,
-    marginBottom: 12,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   card: {
+    width: '100%',
     backgroundColor: colors.surface.elevated,
     borderRadius: 14,
     padding: 16,
@@ -135,29 +166,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  linkBtn: {
+  actionBtn: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     padding: 14,
     borderRadius: 12,
     backgroundColor: colors.surface.elevated,
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.border.onSurface,
   },
-  linkBtnPressed: {
-    opacity: 0.85,
+  actionBtnPressed: {
+    opacity: 0.88,
   },
-  linkBtnText: {
+  actionText: {
+    flex: 1,
+    gap: 2,
+  },
+  actionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.accent.primary,
+    color: colors.text.onSurface,
+  },
+  actionHint: {
+    fontSize: 12,
+    color: colors.text.onSurfaceMuted,
   },
   signOutBtn: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 'auto',
+    marginTop: 8,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -179,6 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.12)',
     padding: 12,
     borderRadius: 10,
+    width: '100%',
   },
   footer: {
     fontFamily: fonts.body,
@@ -186,5 +229,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 16,
+    marginTop: 8,
   },
 });

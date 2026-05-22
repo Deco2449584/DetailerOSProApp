@@ -1,8 +1,9 @@
 import { useRouter, type Href } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -12,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { FineShineLogo } from '@/components/FineShineLogo';
+import { RecordsSearchBar } from '@/components/RecordsSearchBar';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
@@ -21,8 +23,9 @@ import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
 import { getRoleLabel } from '@/services/userRepository';
+import { filterVehiclesBySearch } from '@/utils/filterVehicles';
 
-const TYPE_ACCENTS: Record<VehicleType, string> = {
+const TYPE_ACCENTS: Record<string, string> = {
   nuevo: colors.accent.primary,
   usado: colors.semantic.info,
   redetailing: colors.semantic.warning,
@@ -35,15 +38,22 @@ function countByType(vehicles: Vehicle[], type: VehicleType): number {
 export default function RecordsScreen() {
   const router = useRouter();
   const { user, isAdmin, role, isLoading: authLoading } = useAuth();
-  const { vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { vehicles, isLoading: vehiclesLoading, isRefreshing, error: vehiclesError, refreshRecords } =
+    useVehicles();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredVehicles = useMemo(
+    () => filterVehiclesBySearch(vehicles, searchQuery),
+    [vehicles, searchQuery],
+  );
 
   const counts = useMemo(
     () => ({
-      nuevo: countByType(vehicles, 'nuevo'),
-      usado: countByType(vehicles, 'usado'),
-      redetailing: countByType(vehicles, 'redetailing'),
+      nuevo: countByType(filteredVehicles, 'nuevo'),
+      usado: countByType(filteredVehicles, 'usado'),
+      redetailing: countByType(filteredVehicles, 'redetailing'),
     }),
-    [vehicles],
+    [filteredVehicles],
   );
 
   const isLoading = authLoading || vehiclesLoading;
@@ -60,7 +70,7 @@ export default function RecordsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <FlatList
-        data={vehicles}
+        data={filteredVehicles}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <VehicleCard
@@ -72,6 +82,14 @@ export default function RecordsScreen() {
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refreshRecords}
+            tintColor={colors.accent.primary}
+            colors={[colors.accent.primary]}
+          />
+        }
         ListHeaderComponent={
           <>
             <View style={styles.brandRow}>
@@ -85,7 +103,9 @@ export default function RecordsScreen() {
                   {brand.panelTitle} · {brand.location}
                 </Text>
                 {isAdmin ? (
-                  <Text style={styles.adminBadge}>All team records · {getRoleLabel(role)}</Text>
+                  <Text style={styles.adminBadge}>
+                    All team records · {getRoleLabel(role)}
+                  </Text>
                 ) : null}
               </View>
             </View>
@@ -111,6 +131,8 @@ export default function RecordsScreen() {
               />
             </View>
 
+            <RecordsSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+
             {vehiclesError ? (
               <Text style={styles.errorBanner}>
                 Could not load records: {vehiclesError}
@@ -120,17 +142,27 @@ export default function RecordsScreen() {
             <Text style={styles.sectionTitle}>
               {isAdmin ? 'All records' : 'Recent records'}
             </Text>
-            {vehicles.length > 0 ? (
-              <Text style={styles.sectionHint}>Tap a record to view details and photos</Text>
+            {filteredVehicles.length > 0 ? (
+              <Text style={styles.sectionHint}>
+                {searchQuery.trim()
+                  ? `${filteredVehicles.length} match(es) · tap to view`
+                  : 'Tap a record to view details and photos'}
+              </Text>
+            ) : searchQuery.trim() ? (
+              <Text style={styles.sectionHint}>No records match your search</Text>
             ) : null}
           </>
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
-            <Text style={styles.emptyTitle}>No records yet</Text>
+            <Text style={styles.emptyTitle}>
+              {searchQuery.trim() ? 'No matches' : 'No records yet'}
+            </Text>
             <Text style={styles.emptyHint}>
-              Use the Scan tab to create your first inspection record.
+              {searchQuery.trim()
+                ? 'Try another VIN or model keyword.'
+                : 'Use the Scan tab to create your first inspection record.'}
             </Text>
           </View>
         }
@@ -182,7 +214,7 @@ const styles = StyleSheet.create({
   adminBadge: {
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
-    color: colors.accent.primary,
+    color: colors.text.mutedOnDark,
     marginTop: 4,
   },
   statsRow: {

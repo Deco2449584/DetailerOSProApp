@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,7 +11,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
@@ -53,6 +54,7 @@ function Badge({
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAdmin } = useAuth();
   const { getTypeLabel } = useVehicleCatalog();
@@ -64,31 +66,16 @@ export default function VehicleDetailScreen() {
     [vehicles, id],
   );
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent.primary} />
-      </View>
-    );
-  }
-
-  if (!vehicle) {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.notFound}>
-          <Text style={styles.notFoundTitle}>Record not found</Text>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>← Back to panel</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const statusStyle = STATUS_COLORS[vehicle.status];
-  const typeStyle = getTypeColor(vehicle.type);
+  const handleEdit = () => {
+    if (!vehicle) return;
+    router.push({
+      pathname: '/scanner',
+      params: { editId: vehicle.id },
+    } as Href);
+  };
 
   const handleExportPdf = async () => {
+    if (!vehicle) return;
     setIsPdfLoading(true);
     try {
       await shareVehiclePdf(vehicle);
@@ -99,93 +86,142 @@ export default function VehicleDetailScreen() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.accent.primary} />
+      </View>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: 'Record',
+            headerStyle: { backgroundColor: colors.background.primary },
+            headerTintColor: colors.text.primary,
+            headerShadowVisible: false,
+          }}
+        />
+        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+          <View style={styles.notFound}>
+            <Text style={styles.notFoundTitle}>Record not found</Text>
+          </View>
+        </SafeAreaView>
+      </>
+    );
+  }
+
+  const statusStyle = STATUS_COLORS[vehicle.status];
+  const typeStyle = getTypeColor(vehicle.type);
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        <Pressable style={styles.backLink} onPress={() => router.back()}>
-          <Text style={styles.backLinkText}>← Back to panel</Text>
-        </Pressable>
+    <>
+      <Stack.Screen
+        options={{
+          title: vehicle.model,
+          headerStyle: { backgroundColor: colors.background.primary },
+          headerTintColor: colors.text.primary,
+          headerTitleStyle: { fontFamily: fonts.headingSemiBold },
+          headerShadowVisible: false,
+          headerRight: () => (
+            <Pressable onPress={handleEdit} hitSlop={12} style={styles.headerEditBtn}>
+              <Ionicons name="create-outline" size={24} color={colors.accent.primary} />
+            </Pressable>
+          ),
+        }}
+      />
+      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.subtitle}>{brand.name} · Vehicle details</Text>
 
-        <Text style={styles.title}>{vehicle.model}</Text>
-        <Text style={styles.subtitle}>{brand.name} · Vehicle details</Text>
+          <View style={styles.badges}>
+            <Badge
+              label={STATUS_LABELS[vehicle.status]}
+              backgroundColor={statusStyle.bg}
+              textColor={statusStyle.text}
+            />
+            <Badge
+              label={getTypeLabel(vehicle.type)}
+              backgroundColor={typeStyle.bg}
+              textColor={typeStyle.text}
+            />
+          </View>
 
-        <View style={styles.badges}>
-          <Badge
-            label={STATUS_LABELS[vehicle.status]}
-            backgroundColor={statusStyle.bg}
-            textColor={statusStyle.text}
-          />
-          <Badge
-            label={getTypeLabel(vehicle.type)}
-            backgroundColor={typeStyle.bg}
-            textColor={typeStyle.text}
-          />
-        </View>
-
-        {isAdmin ? (
           <Pressable
-            style={({ pressed }) => [styles.pdfBtn, pressed && styles.pdfBtnPressed]}
-            onPress={handleExportPdf}
-            disabled={isPdfLoading}>
-            {isPdfLoading ? (
-              <ActivityIndicator color={colors.text.onAccent} />
-            ) : (
-              <>
-                <Text style={styles.pdfBtnText}>Export PDF report</Text>
-                <Text style={styles.pdfBtnHint}>Share vehicle inspection document</Text>
-              </>
-            )}
+            style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
+            onPress={handleEdit}>
+            <Ionicons name="create-outline" size={20} color={colors.accent.primary} />
+            <Text style={styles.editBtnText}>Edit record</Text>
           </Pressable>
-        ) : null}
 
-        <View style={styles.card}>
-          {isAdmin && vehicle.createdByEmail ? (
-            <DetailRow label="Operator" value={vehicle.createdByEmail} />
+          <View style={styles.card}>
+            {isAdmin && vehicle.createdByEmail ? (
+              <DetailRow label="Operator" value={vehicle.createdByEmail} />
+            ) : null}
+            <DetailRow label="VIN" value={vehicle.vin} />
+            <DetailRow label="Model" value={vehicle.model} />
+            <DetailRow label="Type" value={getTypeLabel(vehicle.type)} />
+            <DetailRow label="Status" value={STATUS_LABELS[vehicle.status]} />
+            <DetailRow label="Colour" value={vehicle.color} />
+            <DetailRow label="Registered" value={formatVehicleDate(vehicle.createdAt)} />
+            {vehicle.updatedAt ? (
+              <DetailRow label="Last updated" value={formatVehicleDate(vehicle.updatedAt)} />
+            ) : null}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Comments</Text>
+            <Text style={styles.comments}>
+              {vehicle.comments.trim() || 'No comments recorded.'}
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>
+              Photo evidence ({vehicle.imagesUrls.length})
+            </Text>
+            {vehicle.imagesUrls.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.gallery}>
+                {vehicle.imagesUrls.map((uri, index) => (
+                  <View key={`${uri}-${index}`} style={styles.photoWrap}>
+                    <Image source={{ uri }} style={styles.photo} contentFit="cover" />
+                    <Text style={styles.photoIndex}>
+                      {index + 1} / {vehicle.imagesUrls.length}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noPhotos}>No photos attached to this record.</Text>
+            )}
+          </View>
+
+          {isAdmin ? (
+            <Pressable
+              style={({ pressed }) => [styles.pdfBtnOutline, pressed && styles.pdfBtnOutlinePressed]}
+              onPress={handleExportPdf}
+              disabled={isPdfLoading}>
+              {isPdfLoading ? (
+                <ActivityIndicator color={colors.accent.primary} />
+              ) : (
+                <>
+                  <Ionicons name="document-outline" size={22} color={colors.accent.primary} />
+                  <Text style={styles.pdfBtnOutlineText}>Export PDF report</Text>
+                </>
+              )}
+            </Pressable>
           ) : null}
-          <DetailRow label="VIN" value={vehicle.vin} />
-          <DetailRow label="Model" value={vehicle.model} />
-          <DetailRow label="Type" value={getTypeLabel(vehicle.type)} />
-          <DetailRow label="Status" value={STATUS_LABELS[vehicle.status]} />
-          <DetailRow label="Colour" value={vehicle.color} />
-          <DetailRow label="Registered" value={formatVehicleDate(vehicle.createdAt)} />
-          {vehicle.updatedAt ? (
-            <DetailRow label="Last updated" value={formatVehicleDate(vehicle.updatedAt)} />
-          ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionLabel}>Comments</Text>
-          <Text style={styles.comments}>
-            {vehicle.comments.trim() || 'No comments recorded.'}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionLabel}>
-            Photo evidence ({vehicle.imagesUrls.length})
-          </Text>
-          {vehicle.imagesUrls.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.gallery}>
-              {vehicle.imagesUrls.map((uri, index) => (
-                <View key={`${uri}-${index}`} style={styles.photoWrap}>
-                  <Image source={{ uri }} style={styles.photo} contentFit="cover" />
-                  <Text style={styles.photoIndex}>
-                    {index + 1} / {vehicle.imagesUrls.length}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.noPhotos}>No photos attached to this record.</Text>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -204,50 +240,58 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
     gap: 16,
   },
-  backLink: {
-    alignSelf: 'flex-start',
-  },
-  backLinkText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.accent.primary,
-  },
-  title: {
-    fontFamily: fonts.heading,
-    fontSize: 28,
-    color: colors.text.primary,
+  headerEditBtn: {
+    marginRight: 4,
   },
   subtitle: {
     fontSize: 14,
     color: colors.text.secondary,
-    marginTop: -8,
+    marginTop: -4,
   },
   badges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  pdfBtn: {
-    backgroundColor: colors.accent.primary,
-    borderRadius: 14,
-    padding: 16,
-    gap: 4,
+  editBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent.primary,
+    backgroundColor: 'rgba(226, 31, 40, 0.08)',
   },
-  pdfBtnPressed: {
-    backgroundColor: colors.accent.primaryPressed,
+  editBtnPressed: {
+    opacity: 0.85,
   },
-  pdfBtnText: {
+  editBtnText: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 15,
+    color: colors.accent.primary,
+  },
+  pdfBtnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.accent.primary,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  pdfBtnOutlinePressed: {
+    backgroundColor: 'rgba(226, 31, 40, 0.08)',
+  },
+  pdfBtnOutlineText: {
     fontFamily: fonts.headingSemiBold,
     fontSize: 16,
-    color: colors.text.onAccent,
-  },
-  pdfBtnHint: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
+    color: colors.accent.primary,
   },
   badge: {
     paddingHorizontal: 10,
@@ -318,20 +362,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    gap: 16,
   },
   notFoundTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text.primary,
-  },
-  backBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  backBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.accent.primary,
   },
 });

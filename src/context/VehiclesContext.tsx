@@ -24,8 +24,10 @@ export type { NewVehicleInput, UpdateVehicleInput };
 type VehiclesContextValue = {
   vehicles: Vehicle[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   findByVin: (vin: string) => Vehicle | null;
+  refreshRecords: () => Promise<void>;
   addVehicle: (input: NewVehicleInput) => Promise<Vehicle>;
   updateVehicleById: (vehicleId: string, input: UpdateVehicleInput) => Promise<Vehicle>;
 };
@@ -37,6 +39,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -73,6 +76,12 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 
     return unsubscribe;
   }, [user?.uid, isAdmin]);
+
+  const refreshRecords = useCallback(async () => {
+    setIsRefreshing(true);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    setIsRefreshing(false);
+  }, []);
 
   const findByVin = useCallback(
     (vin: string) => findVehicleByVin(vehicles, vin),
@@ -144,12 +153,14 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
     () => ({
       vehicles,
       isLoading,
+      isRefreshing,
       error,
       findByVin,
+      refreshRecords,
       addVehicle,
       updateVehicleById,
     }),
-    [vehicles, isLoading, error, findByVin, addVehicle, updateVehicleById],
+    [vehicles, isLoading, isRefreshing, error, findByVin, refreshRecords, addVehicle, updateVehicleById],
   );
 
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;

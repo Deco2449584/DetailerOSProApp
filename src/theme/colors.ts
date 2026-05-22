@@ -15,6 +15,7 @@ export const colors = {
   text: {
     primary: '#FFFFFF',
     secondary: '#B8B8B8',
+    mutedOnDark: '#A0A0A0',
     onSurface: '#3D3D3D',
     onSurfaceMuted: '#6B6B6B',
     onAccent: '#FFFFFF',

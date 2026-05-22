@@ -1,9 +1,11 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,8 +13,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ColorPickerCarousel } from '@/components/ColorPickerCarousel';
 import { EvidencePhotosField } from '@/components/EvidencePhotosField';
 import { OptionGroup } from '@/components/OptionGroup';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
@@ -25,8 +28,11 @@ import { normalizeVin } from '@/utils/vin';
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { catalog, isLoading: catalogLoading, getTypeLabel } = useVehicleCatalog();
-  const { findByVin, addVehicle, updateVehicleById } = useVehicles();
+  const { vehicles, isLoading: vehiclesLoading, findByVin, addVehicle, updateVehicleById } =
+    useVehicles();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [isScanning, setIsScanning] = useState(true);
@@ -97,6 +103,14 @@ export default function ScannerScreen() {
     },
     [loadVehicleForEdit, resetFormDefaults],
   );
+
+  useEffect(() => {
+    if (!editId || vehiclesLoading) return;
+    const existing = vehicles.find((vehicle) => vehicle.id === editId);
+    if (existing) {
+      loadVehicleForEdit(existing);
+    }
+  }, [editId, vehicles, vehiclesLoading, loadVehicleForEdit]);
 
   const handleBarcodeScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
@@ -197,8 +211,10 @@ export default function ScannerScreen() {
 
   const showForm = !isScanning && scannedVin !== null;
 
+  const formBottomPadding = Math.max(insets.bottom, 16) + 24;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       {isScanning ? (
         <View style={styles.cameraContainer}>
           <CameraView
@@ -226,94 +242,101 @@ export default function ScannerScreen() {
           </View>
         </View>
       ) : showForm ? (
-        <ScrollView
-          contentContainerStyle={styles.formContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Pressable style={styles.backButtonForm} onPress={() => router.back()}>
-            <Text style={styles.backButtonFormText}>← Back to panel</Text>
-          </Pressable>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
+          <ScrollView
+            contentContainerStyle={[styles.formContent, { paddingBottom: formBottomPadding }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <Pressable style={styles.backButtonForm} onPress={() => router.back()}>
+              <Text style={styles.backButtonFormText}>← Back to panel</Text>
+            </Pressable>
 
-          <Text style={styles.formTitle}>
-            {editingVehicleId ? 'Modify inspection' : 'Vehicle inspection'}
-          </Text>
+            <Text style={styles.formTitle}>
+              {editingVehicleId ? 'Modify inspection' : 'Vehicle inspection'}
+            </Text>
 
-          <View style={styles.vinBox}>
-            <Text style={styles.vinLabel}>Scanned VIN</Text>
-            <TextInput
-              style={styles.vinInput}
-              value={scannedVin}
-              editable={false}
-              selectTextOnFocus
-            />
-          </View>
-
-          <View style={styles.formCard}>
-            <OptionGroup
-              label="Model"
-              options={catalog.models}
-              value={model}
-              onChange={setModel}
-            />
-
-            <OptionGroup
-              label="Type"
-              options={catalog.types.map((item) => item.value)}
-              value={type}
-              onChange={setType}
-              getLabel={(option) => getTypeLabel(option)}
-            />
-
-            <OptionGroup
-              label="Official Tesla colour"
-              options={catalog.colors}
-              value={vehicleColor}
-              onChange={setVehicleColor}
-            />
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabelDark}>Comments</Text>
-            <TextInput
-              style={styles.commentsInput}
-              value={comments}
-              onChangeText={setComments}
-              placeholder="Inspection notes..."
-              placeholderTextColor={colors.text.onSurfaceMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={styles.vinBox}>
+              <Text style={styles.vinLabel}>Scanned VIN</Text>
+              <TextInput
+                style={styles.vinInput}
+                value={scannedVin}
+                editable={false}
+                selectTextOnFocus
+              />
             </View>
 
-            <EvidencePhotosField photos={evidencePhotos} onChange={setEvidencePhotos} />
-          </View>
+            <View style={styles.formCard}>
+              <OptionGroup
+                label="Model"
+                options={catalog.models}
+                value={model}
+                onChange={setModel}
+              />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (pressed || isSaving) && styles.primaryButtonPressed,
-              isSaving && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSave}
-            disabled={isSaving}>
-            {isSaving ? (
-              <ActivityIndicator color={colors.text.onAccent} />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {editingVehicleId ? 'Update record' : 'Save & Continue'}
-              </Text>
-            )}
-          </Pressable>
+              <OptionGroup
+                label="Type"
+                options={catalog.types.map((item) => item.value)}
+                value={type}
+                onChange={setType}
+                getLabel={(option) => getTypeLabel(option)}
+              />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.secondaryButtonPressed,
-            ]}
-            onPress={handleScanAgain}>
-            <Text style={styles.secondaryButtonText}>Scan again</Text>
-          </Pressable>
-        </ScrollView>
+              <ColorPickerCarousel
+                label="Official Tesla colour"
+                options={catalog.colors}
+                value={vehicleColor}
+                onChange={setVehicleColor}
+              />
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabelDark}>Comments</Text>
+                <TextInput
+                  style={styles.commentsInput}
+                  value={comments}
+                  onChangeText={setComments}
+                  placeholder="Inspection notes..."
+                  placeholderTextColor={colors.text.onSurfaceMuted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <EvidencePhotosField photos={evidencePhotos} onChange={setEvidencePhotos} />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                (pressed || isSaving) && styles.primaryButtonPressed,
+                isSaving && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleSave}
+              disabled={isSaving}>
+              {isSaving ? (
+                <ActivityIndicator color={colors.text.onAccent} />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {editingVehicleId ? 'Update record' : 'Save & Continue'}
+                </Text>
+              )}
+            </Pressable>
+
+            {!editingVehicleId ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.secondaryButtonPressed,
+                ]}
+                onPress={handleScanAgain}>
+                <Text style={styles.secondaryButtonText}>Scan again</Text>
+              </Pressable>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : null}
     </SafeAreaView>
   );
@@ -324,6 +347,9 @@ const CORNER_SIZE = 28;
 const CORNER_WIDTH = 4;
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   safe: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -429,7 +455,6 @@ const styles = StyleSheet.create({
   },
   formContent: {
     padding: 20,
-    paddingBottom: 40,
     gap: 20,
   },
   backButtonForm: {
