@@ -57,6 +57,7 @@ export default function ScannerScreen() {
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>('create');
   const [existingComments, setExistingComments] = useState('');
+  const [lockedPhotoUris, setLockedPhotoUris] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const [model, setModel] = useState('');
@@ -87,12 +88,14 @@ export default function ScannerScreen() {
     setEditingVehicleId(null);
     setFormMode('create');
     setExistingComments('');
+    setLockedPhotoUris([]);
   }, [catalog]);
 
   const loadVehicleForAdminEdit = useCallback((vehicle: Vehicle) => {
     setFormMode('admin-edit');
     setEditingVehicleId(vehicle.id);
     setExistingComments('');
+    setLockedPhotoUris([]);
     setScannedVin(vehicle.vin);
     setModel(vehicle.model);
     setType(vehicle.type);
@@ -106,6 +109,7 @@ export default function ScannerScreen() {
     setFormMode('append');
     setEditingVehicleId(vehicle.id);
     setExistingComments(vehicle.comments);
+    setLockedPhotoUris([...vehicle.imagesUrls]);
     setScannedVin(vehicle.vin);
     setModel(vehicle.model);
     setType(vehicle.type);
@@ -418,7 +422,14 @@ export default function ScannerScreen() {
                 />
               </View>
 
-              <EvidencePhotosField photos={evidencePhotos} onChange={setEvidencePhotos} />
+              <EvidencePhotosField
+                photos={evidencePhotos}
+                onChange={setEvidencePhotos}
+                isAdmin={isAdmin}
+                lockedPhotoUris={
+                  !isAdmin && effectiveMode === 'append' ? lockedPhotoUris : []
+                }
+              />
             </View>
 
             <Pressable

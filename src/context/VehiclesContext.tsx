@@ -184,6 +184,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
         vehicleId,
         input,
         existing.comments,
+        existing.imagesUrls,
       );
 
       const updated: Vehicle = {

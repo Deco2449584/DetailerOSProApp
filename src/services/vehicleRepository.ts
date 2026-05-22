@@ -252,6 +252,7 @@ export async function appendToVehicle(
   vehicleId: string,
   input: AppendVehicleInput,
   existingComments: string,
+  existingImageUrls: string[],
 ): Promise<{ imageUrls: string[]; comments: string; updatedAtIso: string }> {
   if (!db) {
     throw new Error('Firestore is not configured.');
@@ -260,14 +261,12 @@ export async function appendToVehicle(
   const localUris = input.imagesUrls.filter(
     (uri) => !uri.startsWith('http://') && !uri.startsWith('https://'),
   );
-  const keptRemoteUrls = input.imagesUrls.filter(
-    (uri) => uri.startsWith('http://') || uri.startsWith('https://'),
-  );
 
   const uploadedUrls =
     localUris.length > 0 ? await uploadVehicleImages(userId, vehicleId, localUris) : [];
 
-  const imageUrls = [...keptRemoteUrls, ...uploadedUrls];
+  // Always keep photos already on the record; append only uploads new local files.
+  const imageUrls = [...existingImageUrls, ...uploadedUrls];
   const comments = mergeComments(existingComments, input.additionalComments);
   const updatedAtIso = new Date().toISOString();
 

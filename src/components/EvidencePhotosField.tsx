@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useThemedStyles } from '@/hooks/useThemedStyles';
@@ -8,6 +9,10 @@ import type { AppColors } from '@/theme/palettes';
 type EvidencePhotosFieldProps = {
   photos: string[];
   onChange: (photos: string[]) => void;
+  /** When false, URIs in lockedPhotoUris cannot be removed from the gallery. */
+  isAdmin?: boolean;
+  /** Photos already saved on the record (operators may not delete these). */
+  lockedPhotoUris?: readonly string[];
 };
 
 async function ensureCameraPermission(): Promise<boolean> {
@@ -126,8 +131,16 @@ function createStyles(colors: AppColors) {
   });
 }
 
-export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldProps) {
+export function EvidencePhotosField({
+  photos,
+  onChange,
+  isAdmin = false,
+  lockedPhotoUris = [],
+}: EvidencePhotosFieldProps) {
   const styles = useThemedStyles(createStyles);
+  const lockedSet = useMemo(() => new Set(lockedPhotoUris), [lockedPhotoUris]);
+
+  const canRemovePhoto = (uri: string) => isAdmin || !lockedSet.has(uri);
 
   const appendPhotos = (uris: string[]) => {
     if (uris.length === 0) return;
@@ -166,6 +179,13 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
   };
 
   const handleRemove = (uri: string) => {
+    if (!canRemovePhoto(uri)) {
+      Alert.alert(
+        'Not allowed',
+        'Only administrators can remove photos already saved on this record.',
+      );
+      return;
+    }
     onChange(photos.filter((item) => item !== uri));
   };
 
@@ -199,9 +219,11 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
           {photos.map((uri) => (
             <View key={uri} style={styles.thumbnailWrap}>
               <Image source={{ uri }} style={styles.thumbnail} contentFit="cover" />
-              <Pressable style={styles.removeBtn} onPress={() => handleRemove(uri)}>
-                <Text style={styles.removeBtnText}>×</Text>
-              </Pressable>
+              {canRemovePhoto(uri) ? (
+                <Pressable style={styles.removeBtn} onPress={() => handleRemove(uri)}>
+                  <Text style={styles.removeBtnText}>×</Text>
+                </Pressable>
+              ) : null}
             </View>
           ))}
         </ScrollView>
