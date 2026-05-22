@@ -42,3 +42,12 @@ export interface Vehicle {
   imagesUrls: string[];
   createdAt: Date | string;
 }
+
+export type NewVehicleInput = {
+  vin: string;
+  model: TeslaModel;
+  type: VehicleType;
+  color: TeslaColor;
+  comments: string;
+  imagesUrls: string[];
+};

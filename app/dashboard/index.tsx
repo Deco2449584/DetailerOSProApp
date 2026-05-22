@@ -35,7 +35,7 @@ function countByType(vehicles: Vehicle[], type: VehicleType): number {
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, isLoading: authLoading, signOut } = useAuth();
-  const { vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const { vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
 
   const counts = useMemo(
     () => ({
@@ -130,6 +130,12 @@ export default function DashboardScreen() {
               onPress={handleStartScan}>
               <Text style={styles.scanButtonText}>Start Scan (Read VIN)</Text>
             </Pressable>
+
+            {vehiclesError ? (
+              <Text style={styles.errorBanner}>
+                Could not load records: {vehiclesError}
+              </Text>
+            ) : null}
 
             <Text style={styles.sectionTitle}>Recent Records</Text>
             {vehicles.length > 0 ? (
@@ -236,6 +242,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: colors.text.onAccent,
     letterSpacing: 0.3,
+  },
+  errorBanner: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.semantic.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontFamily: fonts.headingSemiBold,

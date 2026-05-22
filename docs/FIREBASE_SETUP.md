@@ -1,0 +1,122 @@
+# Configuración de Firebase (Fine Shine)
+
+La app usa **Firebase Auth**, **Cloud Firestore** y **Firebase Storage** con el SDK web modular (v9+).
+
+## 1. Proyecto en Firebase Console
+
+1. Entra a [Firebase Console](https://console.firebase.google.com/).
+2. Abre el proyecto **detailospro** (o crea uno nuevo).
+3. En **Build** activa:
+   - **Authentication** → método **Email/Password**
+   - **Firestore Database** → crea base en modo producción (región cercana, p. ej. `australia-southeast1`)
+   - **Storage** → crea bucket por defecto
+
+## 2. App web y variables de entorno
+
+1. **Project settings** (engranaje) → **Your apps** → **Add app** → **Web** (`</>`).
+2. Copia el objeto `firebaseConfig` y rellena `.env` en la raíz del repo:
+
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=tu_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=tu_proyecto
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=tu_proyecto.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+```
+
+3. Reinicia Metro después de cambiar `.env`:
+
+```bash
+npm run start:clear
+```
+
+## 3. Usuarios de prueba (Auth)
+
+1. **Authentication** → **Sign-in method** → activa **Email/Password**.
+2. **Users** → **Add user** → crea correo y contraseña para los operarios.
+
+## 4. Reglas de Firestore
+
+**Firestore** → **Rules** → pega y publica:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /vehicles/{vehicleId} {
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+  }
+}
+```
+
+## 5. Reglas de Storage
+
+**Storage** → **Rules** → pega y publica:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /vehicles/{userId}/{vehicleId}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+Las fotos se guardan en: `vehicles/{uid}/{vehicleId}/{timestamp}-{index}.jpg`
+
+## 6. EAS Build (APK / producción)
+
+Las variables `EXPO_PUBLIC_*` deben existir en EAS:
+
+```bash
+npx eas env:push --environment preview --path .env
+```
+
+Comprueba:
+
+```bash
+npx eas env:list --environment preview
+```
+
+## 7. Estructura de datos
+
+Colección **`vehicles`** (documento por inspección):
+
+| Campo        | Tipo     | Descripción                          |
+|-------------|----------|--------------------------------------|
+| userId      | string   | UID de Auth (dueño del registro)     |
+| vin         | string   | VIN escaneado                        |
+| model       | string   | Modelo Tesla                         |
+| type        | string   | `nuevo` \| `usado` \| `redetailing`  |
+| status      | string   | `pendiente`, etc.                    |
+| color       | string   | Color Tesla                          |
+| comments    | string   | Comentarios                          |
+| imagesUrls  | string[] | URLs públicas de descarga (Storage)  |
+| createdAt   | timestamp| Fecha de creación                    |
+
+## 8. Comprobar en la app
+
+1. Inicia sesión con un usuario de Auth.
+2. Escanea un VIN y adjunta fotos.
+3. En Firebase Console:
+   - **Firestore** → colección `vehicles` → nuevo documento
+   - **Storage** → carpeta `vehicles/{tu-uid}/...` → archivos de imagen
+
+## 9. Errores frecuentes
+
+| Error | Solución |
+|-------|----------|
+| `permission-denied` | Revisa reglas y que el usuario esté logueado |
+| `Firebase is not configured` | Completa `.env` o `eas env:push` |
+| El dashboard no muestra registros nuevos | Revisa reglas Firestore y que `userId` coincida con el UID del login |
+| `storage/unauthorized` | Reglas de Storage y mismo `userId` en la ruta |

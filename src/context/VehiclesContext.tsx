@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
   useCallback,
@@ -9,103 +8,85 @@ import {
   type ReactNode,
 } from 'react';
 
-import type { TeslaColor, TeslaModel, Vehicle, VehicleType } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { createVehicle, subscribeToUserVehicles } from '@/services/vehicleRepository';
+import { isFirebaseConfigured } from '@/services/firebaseConfig';
+import type { NewVehicleInput, Vehicle } from '@/types';
 
-const STORAGE_KEY = '@detaileros/user-vehicles';
-
-export type NewVehicleInput = {
-  vin: string;
-  model: TeslaModel;
-  type: VehicleType;
-  color: TeslaColor;
-  comments: string;
-  imagesUrls: string[];
-};
+export type { NewVehicleInput };
 
 type VehiclesContextValue = {
   vehicles: Vehicle[];
   isLoading: boolean;
+  error: string | null;
   addVehicle: (input: NewVehicleInput) => Promise<Vehicle>;
 };
 
 const VehiclesContext = createContext<VehiclesContextValue | undefined>(undefined);
 
-function sortByNewest(list: Vehicle[]): Vehicle[] {
-  return [...list].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
-}
-
-function createVehicleId(vin: string): string {
-  return `${vin}-${Date.now()}`;
-}
-
-async function loadVehicles(): Promise<Vehicle[]> {
-  try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as Vehicle[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-async function persistVehicles(vehicles: Vehicle[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
-  } catch {
-    // Native module or storage full: record remains in memory for this session.
-  }
-}
-
 export function VehiclesProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!user) {
+      setVehicles([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
 
-    (async () => {
-      const stored = await loadVehicles();
-      if (!cancelled) {
-        setVehicles(sortByNewest(stored));
+    if (!isFirebaseConfigured) {
+      setVehicles([]);
+      setError('Firebase is not configured.');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const unsubscribe = subscribeToUserVehicles(
+      user.uid,
+      (nextVehicles) => {
+        setVehicles(nextVehicles);
         setIsLoading(false);
+        setError(null);
+      },
+      (subscriptionError) => {
+        setError(subscriptionError.message);
+        setIsLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, [user?.uid]);
+
+  const addVehicle = useCallback(
+    async (input: NewVehicleInput): Promise<Vehicle> => {
+      if (!user) {
+        throw new Error('You must be signed in to save a record.');
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      const vehicle = await createVehicle(user.uid, input);
 
-  const addVehicle = useCallback(async (input: NewVehicleInput): Promise<Vehicle> => {
-    const vehicle: Vehicle = {
-      id: createVehicleId(input.vin),
-      vin: input.vin,
-      model: input.model,
-      type: input.type,
-      status: 'pendiente',
-      color: input.color,
-      comments: input.comments.trim(),
-      imagesUrls: input.imagesUrls,
-      createdAt: new Date().toISOString(),
-    };
+      setVehicles((prev) => {
+        const withoutDuplicate = prev.filter((item) => item.id !== vehicle.id);
+        return [vehicle, ...withoutDuplicate].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      });
 
-    setVehicles((prev) => {
-      const next = [vehicle, ...prev];
-      void persistVehicles(next);
-      return next;
-    });
-
-    return vehicle;
-  }, []);
-
-  const sortedVehicles = useMemo(() => sortByNewest(vehicles), [vehicles]);
+      return vehicle;
+    },
+    [user],
+  );
 
   const value = useMemo(
-    () => ({ vehicles: sortedVehicles, isLoading, addVehicle }),
-    [sortedVehicles, isLoading, addVehicle],
+    () => ({ vehicles, isLoading, error, addVehicle }),
+    [vehicles, isLoading, error, addVehicle],
   );
 
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;
