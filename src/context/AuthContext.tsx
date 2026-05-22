@@ -15,7 +15,11 @@ import {
 } from 'react';
 
 import { auth, isFirebaseConfigured } from '@/services/firebaseConfig';
-import { ensureUserProfile } from '@/services/userRepository';
+import {
+  buildFallbackProfile,
+  ensureUserProfile,
+  resolveUserRole,
+} from '@/services/userRepository';
 import type { UserProfile, UserRole } from '@/types/auth';
 
 type AuthContextValue = {
@@ -23,6 +27,7 @@ type AuthContextValue = {
   role: UserRole;
   isAdmin: boolean;
   profile: UserProfile | null;
+  profileSyncFailed: boolean;
   isLoading: boolean;
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -34,6 +39,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileSyncFailed, setProfileSyncFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -47,15 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!firebaseUser) {
         setProfile(null);
+        setProfileSyncFailed(false);
         setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
+      setProfileSyncFailed(false);
+
       try {
-        const nextProfile = await ensureUserProfile(firebaseUser);
+        const { profile: nextProfile, syncedToFirestore } = await ensureUserProfile(firebaseUser);
         setProfile(nextProfile);
+        setProfileSyncFailed(!syncedToFirestore);
       } catch {
-        setProfile(null);
+        setProfile(buildFallbackProfile(firebaseUser));
+        setProfileSyncFailed(true);
       } finally {
         setIsLoading(false);
       }
@@ -80,9 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     await firebaseSignOut(auth);
     setProfile(null);
+    setProfileSyncFailed(false);
   }, []);
 
-  const role: UserRole = profile?.role ?? 'operator';
+  const role = resolveUserRole(user, profile);
   const isAdmin = role === 'admin';
 
   const value = useMemo(
@@ -91,12 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       isAdmin,
       profile,
+      profileSyncFailed,
       isLoading,
       isConfigured: isFirebaseConfigured,
       signIn,
       signOut,
     }),
-    [user, role, isAdmin, profile, isLoading, signIn, signOut],
+    [user, role, isAdmin, profile, profileSyncFailed, isLoading, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

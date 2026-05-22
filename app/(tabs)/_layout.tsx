@@ -1,4 +1,5 @@
 import { Redirect, Tabs, useRouter } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
 import { AppTabBar } from '@/components/AppTabBar';
 import { useAuth } from '@/context/AuthContext';
@@ -8,12 +9,27 @@ export default function TabsLayout() {
   const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
 
-  if (!isLoading && !user) {
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.background.primary,
+        }}>
+        <ActivityIndicator size="large" color={colors.accent.primary} />
+      </View>
+    );
+  }
+
+  if (!user) {
     return <Redirect href="/login" />;
   }
 
   return (
     <Tabs
+      key={isAdmin ? 'tabs-admin' : 'tabs-operator'}
       tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -34,7 +50,7 @@ export default function TabsLayout() {
         name="admin"
         options={{
           title: 'Admin',
-          href: isAdmin ? undefined : null,
+          href: isAdmin ? '/admin' : null,
         }}
       />
       <Tabs.Screen name="account" options={{ title: 'Account' }} />

@@ -72,6 +72,14 @@ service cloud.firestore {
 
 También puedes asignar admin manualmente en Firestore: colección `users` → documento `{uid}` → campo `role: "admin"`.
 
+**Importante:** publica las reglas del archivo `firebase/firestore.rules` en la consola (incluye la colección `users`). Sin eso, el perfil no se guarda en Firestore, pero el admin por email en `.env` sigue funcionando.
+
+Después de cambiar `.env`, reinicia Metro:
+
+```bash
+npm run start:clear
+```
+
 ## 5. Reglas de Storage
 
 **Storage** → **Rules** → pega y publica:

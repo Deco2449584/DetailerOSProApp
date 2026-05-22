@@ -35,7 +35,7 @@ export default function LoginScreen() {
   }
 
   if (user) {
-    return <Redirect href="/dashboard" />;
+    return <Redirect href="/(tabs)" />;
   }
 
   const handleSignIn = async () => {
@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
     try {
       await signIn(email, password);
-      router.replace('/dashboard');
+      router.replace('/(tabs)');
     } catch {
       setError('Invalid credentials or connection error.');
     } finally {

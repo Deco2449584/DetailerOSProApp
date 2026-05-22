@@ -25,7 +25,7 @@ export default function AdminScreen() {
   const [isExporting, setIsExporting] = useState<'csv' | 'excel' | null>(null);
 
   if (!authLoading && !isAdmin) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/(tabs)/" />;
   }
 
   const handleExport = async (format: 'csv' | 'excel') => {

@@ -13,58 +13,103 @@ function parseAdminEmails(): string[] {
     .filter(Boolean);
 }
 
+export function getConfiguredAdminEmails(): string[] {
+  return parseAdminEmails();
+}
+
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return parseAdminEmails().includes(email.trim().toLowerCase());
 }
 
-export async function ensureUserProfile(user: User): Promise<UserProfile> {
+/** Role from .env when Firestore is unavailable or not synced yet. */
+export function resolveRoleFromEmail(email: string | null | undefined): UserRole {
+  return isAdminEmail(email) ? 'admin' : 'operator';
+}
+
+export function buildFallbackProfile(user: User): UserProfile {
+  const email = user.email ?? '';
+  return {
+    email,
+    role: resolveRoleFromEmail(email),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function resolveUserRole(
+  user: User | null | undefined,
+  profile: UserProfile | null | undefined,
+): UserRole {
+  if (!user) return 'operator';
+  if (isAdminEmail(user.email)) return 'admin';
+  if (profile?.role === 'admin') return 'admin';
+  return profile?.role === 'operator' ? 'operator' : 'operator';
+}
+
+export type EnsureUserProfileResult = {
+  profile: UserProfile;
+  syncedToFirestore: boolean;
+};
+
+export async function ensureUserProfile(user: User): Promise<EnsureUserProfileResult> {
   if (!db) {
-    throw new Error('Firestore is not configured.');
+    return { profile: buildFallbackProfile(user), syncedToFirestore: false };
   }
 
   const userRef = doc(db, USERS_COLLECTION, user.uid);
-  const snapshot = await getDoc(userRef);
   const email = user.email ?? '';
   const shouldBeAdmin = isAdminEmail(email);
   const now = new Date().toISOString();
 
-  if (!snapshot.exists()) {
-    const profile: UserProfile = {
-      email,
-      role: shouldBeAdmin ? 'admin' : 'operator',
-      updatedAt: now,
+  try {
+    const snapshot = await getDoc(userRef);
+
+    if (!snapshot.exists()) {
+      const profile: UserProfile = {
+        email,
+        role: shouldBeAdmin ? 'admin' : 'operator',
+        updatedAt: now,
+      };
+      await setDoc(userRef, profile);
+      return { profile, syncedToFirestore: true };
+    }
+
+    const existing = snapshot.data() as UserProfile;
+    if (shouldBeAdmin && existing.role !== 'admin') {
+      const profile: UserProfile = { ...existing, email, role: 'admin', updatedAt: now };
+      await updateDoc(userRef, profile);
+      return { profile, syncedToFirestore: true };
+    }
+
+    return {
+      profile: {
+        email: existing.email ?? email,
+        role: existing.role === 'admin' || shouldBeAdmin ? 'admin' : 'operator',
+        updatedAt: existing.updatedAt ?? now,
+      },
+      syncedToFirestore: true,
     };
-    await setDoc(userRef, profile);
-    return profile;
+  } catch {
+    return { profile: buildFallbackProfile(user), syncedToFirestore: false };
   }
-
-  const existing = snapshot.data() as UserProfile;
-  if (shouldBeAdmin && existing.role !== 'admin') {
-    const profile: UserProfile = { ...existing, email, role: 'admin', updatedAt: now };
-    await updateDoc(userRef, profile);
-    return profile;
-  }
-
-  return {
-    email: existing.email ?? email,
-    role: existing.role ?? 'operator',
-    updatedAt: existing.updatedAt ?? now,
-  };
 }
 
 export async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
   if (!db) return null;
 
-  const snapshot = await getDoc(doc(db, USERS_COLLECTION, uid));
-  if (!snapshot.exists()) return null;
+  try {
+    const snapshot = await getDoc(doc(db, USERS_COLLECTION, uid));
+    if (!snapshot.exists()) return null;
 
-  const data = snapshot.data() as UserProfile;
-  return {
-    email: data.email ?? '',
-    role: data.role === 'admin' ? 'admin' : 'operator',
-    updatedAt: data.updatedAt ?? '',
-  };
+    const data = snapshot.data() as UserProfile;
+    return {
+      email: data.email ?? '',
+      role: data.role === 'admin' ? 'admin' : 'operator',
+      updatedAt: data.updatedAt ?? '',
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function getRoleLabel(role: UserRole): string {

@@ -9,10 +9,16 @@ import { useAuth } from '@/context/AuthContext';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
-import { getRoleLabel } from '@/services/userRepository';
+import {
+  getConfiguredAdminEmails,
+  getRoleLabel,
+  isAdminEmail,
+} from '@/services/userRepository';
 
 export default function AccountScreen() {
-  const { user, role, isAdmin, signOut } = useAuth();
+  const { user, role, isAdmin, profileSyncFailed, signOut } = useAuth();
+  const emailMatchesAdminList = isAdminEmail(user?.email);
+  const adminEmailsConfigured = getConfiguredAdminEmails().length > 0;
   const router = useRouter();
 
   return (
@@ -38,6 +44,25 @@ export default function AccountScreen() {
             </Text>
           </View>
         </View>
+
+        {profileSyncFailed ? (
+          <Text style={styles.hintWarn}>
+            Could not sync your profile to Firestore. Admin access still works if your email is
+            listed in EXPO_PUBLIC_ADMIN_EMAILS. Publish rules from firebase/firestore.rules.
+          </Text>
+        ) : null}
+
+        {!isAdmin && emailMatchesAdminList && adminEmailsConfigured ? (
+          <Text style={styles.hintWarn}>
+            Your email is in the admin list. Restart the app with: npm run start:clear
+          </Text>
+        ) : null}
+
+        {!adminEmailsConfigured ? (
+          <Text style={styles.hintWarn}>
+            EXPO_PUBLIC_ADMIN_EMAILS is empty in .env. Add your email and run npm run start:clear
+          </Text>
+        ) : null}
 
         {isAdmin ? (
           <Pressable
@@ -145,6 +170,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.semantic.error,
+  },
+  hintWarn: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.semantic.warning,
+    lineHeight: 18,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    padding: 12,
+    borderRadius: 10,
   },
   footer: {
     fontFamily: fonts.body,
