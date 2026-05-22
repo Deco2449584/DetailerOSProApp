@@ -12,18 +12,22 @@ import { useAuth } from '@/context/AuthContext';
 import { isFirebaseConfigured } from '@/services/firebaseConfig';
 import {
   createVehicle,
+  findVehicleByVin,
   subscribeToAllVehicles,
   subscribeToUserVehicles,
+  updateVehicle,
 } from '@/services/vehicleRepository';
-import type { NewVehicleInput, Vehicle } from '@/types';
+import type { NewVehicleInput, UpdateVehicleInput, Vehicle } from '@/types';
 
-export type { NewVehicleInput };
+export type { NewVehicleInput, UpdateVehicleInput };
 
 type VehiclesContextValue = {
   vehicles: Vehicle[];
   isLoading: boolean;
   error: string | null;
+  findByVin: (vin: string) => Vehicle | null;
   addVehicle: (input: NewVehicleInput) => Promise<Vehicle>;
+  updateVehicleById: (vehicleId: string, input: UpdateVehicleInput) => Promise<Vehicle>;
 };
 
 const VehiclesContext = createContext<VehiclesContextValue | undefined>(undefined);
@@ -70,10 +74,20 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, [user?.uid, isAdmin]);
 
+  const findByVin = useCallback(
+    (vin: string) => findVehicleByVin(vehicles, vin),
+    [vehicles],
+  );
+
   const addVehicle = useCallback(
     async (input: NewVehicleInput): Promise<Vehicle> => {
       if (!user) {
         throw new Error('You must be signed in to save a record.');
+      }
+
+      const duplicate = findVehicleByVin(vehicles, input.vin);
+      if (duplicate) {
+        throw new Error('DUPLICATE_VIN');
       }
 
       const vehicle = await createVehicle(user.uid, input, user.email ?? '');
@@ -87,12 +101,55 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 
       return vehicle;
     },
-    [user],
+    [user, vehicles],
+  );
+
+  const updateVehicleById = useCallback(
+    async (vehicleId: string, input: UpdateVehicleInput): Promise<Vehicle> => {
+      if (!user) {
+        throw new Error('You must be signed in to update a record.');
+      }
+
+      const existing = vehicles.find((vehicle) => vehicle.id === vehicleId);
+      if (!existing) {
+        throw new Error('Vehicle record not found.');
+      }
+
+      const { imageUrls, updatedAtIso } = await updateVehicle(user.uid, vehicleId, input);
+
+      const updated: Vehicle = {
+        ...existing,
+        model: input.model,
+        type: input.type,
+        color: input.color,
+        comments: input.comments.trim(),
+        imagesUrls: imageUrls,
+        updatedAt: updatedAtIso,
+      };
+
+      setVehicles((prev) =>
+        prev
+          .map((vehicle) => (vehicle.id === vehicleId ? updated : vehicle))
+          .sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          ),
+      );
+
+      return updated;
+    },
+    [user, vehicles],
   );
 
   const value = useMemo(
-    () => ({ vehicles, isLoading, error, addVehicle }),
-    [vehicles, isLoading, error, addVehicle],
+    () => ({
+      vehicles,
+      isLoading,
+      error,
+      findByVin,
+      addVehicle,
+      updateVehicleById,
+    }),
+    [vehicles, isLoading, error, findByVin, addVehicle, updateVehicleById],
   );
 
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
+import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
@@ -21,6 +22,7 @@ import { shareVehiclesAsCsv, shareVehiclesAsExcel } from '@/utils/exportVehicles
 
 export default function AdminScreen() {
   const { isAdmin, isLoading: authLoading } = useAuth();
+  const { catalog } = useVehicleCatalog();
   const { vehicles, isLoading: vehiclesLoading } = useVehicles();
   const [isExporting, setIsExporting] = useState<'csv' | 'excel' | null>(null);
 
@@ -37,9 +39,9 @@ export default function AdminScreen() {
     setIsExporting(format);
     try {
       if (format === 'csv') {
-        await shareVehiclesAsCsv(vehicles);
+        await shareVehiclesAsCsv(vehicles, catalog.types);
       } else {
-        await shareVehiclesAsExcel(vehicles);
+        await shareVehiclesAsExcel(vehicles, catalog.types);
       }
     } catch {
       Alert.alert('Export failed', 'Could not create or share the file. Please try again.');

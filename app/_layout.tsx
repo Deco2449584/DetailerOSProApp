@@ -19,6 +19,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/AuthContext';
+import { VehicleCatalogProvider } from '@/context/VehicleCatalogContext';
 import { VehiclesProvider } from '@/context/VehiclesContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -57,6 +58,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <VehicleCatalogProvider>
         <VehiclesProvider>
           <Stack
             screenOptions={{
@@ -71,6 +73,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="light" />
         </VehiclesProvider>
+        </VehicleCatalogProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

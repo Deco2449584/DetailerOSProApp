@@ -4,7 +4,7 @@ import * as Sharing from 'expo-sharing';
 import { brand } from '@/theme/brand';
 import type { Vehicle } from '@/types';
 import { formatVehicleDate } from '@/utils/formatDate';
-import { STATUS_LABELS, TYPE_LABELS } from '@/utils/vehicleLabels';
+import { STATUS_LABELS, getTypeLabel } from '@/utils/vehicleLabels';
 
 function escapeHtml(value: string): string {
   return value
@@ -52,10 +52,11 @@ function buildVehicleHtml(vehicle: Vehicle): string {
   <div class="grid">
     <div class="field"><label>VIN</label><span>${escapeHtml(vehicle.vin)}</span></div>
     <div class="field"><label>Model</label><span>${escapeHtml(vehicle.model)}</span></div>
-    <div class="field"><label>Type</label><span>${escapeHtml(TYPE_LABELS[vehicle.type])}</span></div>
+    <div class="field"><label>Type</label><span>${escapeHtml(getTypeLabel(vehicle.type))}</span></div>
     <div class="field"><label>Status</label><span>${escapeHtml(STATUS_LABELS[vehicle.status])}</span></div>
     <div class="field"><label>Colour</label><span>${escapeHtml(vehicle.color)}</span></div>
     <div class="field"><label>Registered</label><span>${escapeHtml(formatVehicleDate(vehicle.createdAt))}</span></div>
+    ${vehicle.updatedAt ? `<div class="field"><label>Updated</label><span>${escapeHtml(formatVehicleDate(vehicle.updatedAt))}</span></div>` : ''}
     <div class="field"><label>Operator</label><span>${escapeHtml(vehicle.createdByEmail || '—')}</span></div>
     <div class="field"><label>Record ID</label><span>${escapeHtml(vehicle.id)}</span></div>
   </div>

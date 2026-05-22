@@ -3,7 +3,12 @@ import * as Sharing from 'expo-sharing';
 
 import type { Vehicle } from '@/types';
 import { formatVehicleDate } from '@/utils/formatDate';
-import { STATUS_LABELS, TYPE_LABELS } from '@/utils/vehicleLabels';
+import { STATUS_LABELS } from '@/utils/vehicleLabels';
+import type { CatalogTypeOption } from '@/types/catalog';
+
+function buildTypeLabelMap(types: CatalogTypeOption[]): Map<string, string> {
+  return new Map(types.map((type) => [type.value, type.label]));
+}
 
 const CSV_HEADERS = [
   'ID',
@@ -23,12 +28,12 @@ function escapeCsvCell(value: string): string {
   return `"${normalized}"`;
 }
 
-function vehicleToRow(vehicle: Vehicle): string[] {
+function vehicleToRow(vehicle: Vehicle, typeLabels: Map<string, string>): string[] {
   return [
     vehicle.id,
     vehicle.vin,
     vehicle.model,
-    TYPE_LABELS[vehicle.type],
+    typeLabels.get(vehicle.type) ?? vehicle.type,
     STATUS_LABELS[vehicle.status],
     vehicle.color,
     vehicle.comments,
@@ -38,10 +43,14 @@ function vehicleToRow(vehicle: Vehicle): string[] {
   ];
 }
 
-export function vehiclesToCsv(vehicles: Vehicle[]): string {
+export function vehiclesToCsv(
+  vehicles: Vehicle[],
+  catalogTypes: CatalogTypeOption[] = [],
+): string {
+  const typeLabels = buildTypeLabelMap(catalogTypes);
   const header = CSV_HEADERS.map(escapeCsvCell).join(',');
   const rows = vehicles.map((vehicle) =>
-    vehicleToRow(vehicle).map(escapeCsvCell).join(','),
+    vehicleToRow(vehicle, typeLabels).map(escapeCsvCell).join(','),
   );
   return `\uFEFF${[header, ...rows].join('\n')}`;
 }
@@ -64,20 +73,26 @@ async function writeAndShare(content: string, filename: string, mimeType: string
   });
 }
 
-export async function shareVehiclesAsCsv(vehicles: Vehicle[]): Promise<void> {
+export async function shareVehiclesAsCsv(
+  vehicles: Vehicle[],
+  catalogTypes: CatalogTypeOption[] = [],
+): Promise<void> {
   const timestamp = new Date().toISOString().slice(0, 10);
   await writeAndShare(
-    vehiclesToCsv(vehicles),
+    vehiclesToCsv(vehicles, catalogTypes),
     `fineshine-records-${timestamp}.csv`,
     'text/csv',
   );
 }
 
 /** Excel opens UTF-8 CSV saved with .xls extension on mobile share sheets. */
-export async function shareVehiclesAsExcel(vehicles: Vehicle[]): Promise<void> {
+export async function shareVehiclesAsExcel(
+  vehicles: Vehicle[],
+  catalogTypes: CatalogTypeOption[] = [],
+): Promise<void> {
   const timestamp = new Date().toISOString().slice(0, 10);
   await writeAndShare(
-    vehiclesToCsv(vehicles),
+    vehiclesToCsv(vehicles, catalogTypes),
     `fineshine-records-${timestamp}.xls`,
     'application/vnd.ms-excel',
   );

@@ -4,14 +4,17 @@ import {
   doc,
   onSnapshot,
   query,
+  serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   type Unsubscribe,
 } from 'firebase/firestore';
 
 import { db } from '@/services/firebaseConfig';
 import { uploadVehicleImages } from '@/services/vehicleStorage';
-import type { NewVehicleInput, Vehicle, VehicleStatus } from '@/types';
+import type { NewVehicleInput, UpdateVehicleInput, Vehicle, VehicleStatus } from '@/types';
+import { normalizeVin } from '@/utils/vin';
 
 const VEHICLES_COLLECTION = 'vehicles';
 
@@ -19,22 +22,35 @@ export type VehicleDocument = {
   userId: string;
   createdByEmail?: string;
   vin: string;
-  model: Vehicle['model'];
-  type: Vehicle['type'];
+  model: string;
+  type: string;
   status: VehicleStatus;
-  color: Vehicle['color'];
+  color: string;
   comments: string;
   imagesUrls: string[];
   createdAt: Timestamp | string;
+  createdAtIso?: string;
+  updatedAt?: Timestamp | string;
+  updatedAtIso?: string;
 };
 
-function toIsoDate(value: VehicleDocument['createdAt']): string {
+function timestampToIso(value: Timestamp | string | undefined): string | undefined {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString();
   }
   if (typeof value === 'string' && value.length > 0) {
     return value;
   }
+  return undefined;
+}
+
+function toDisplayIso(
+  primary?: Timestamp | string,
+  fallbackIso?: string,
+): string {
+  const fromPrimary = timestampToIso(primary);
+  if (fromPrimary) return fromPrimary;
+  if (fallbackIso) return fallbackIso;
   return new Date(0).toISOString();
 }
 
@@ -56,8 +72,14 @@ function mapDocumentToVehicle(id: string, data: VehicleDocument): Vehicle {
     color: data.color,
     comments: data.comments ?? '',
     imagesUrls: data.imagesUrls ?? [],
-    createdAt: toIsoDate(data.createdAt),
+    createdAt: toDisplayIso(data.createdAt, data.createdAtIso),
+    updatedAt: timestampToIso(data.updatedAt) ?? data.updatedAtIso,
   };
+}
+
+export function findVehicleByVin(vehicles: Vehicle[], vin: string): Vehicle | null {
+  const key = normalizeVin(vin);
+  return vehicles.find((vehicle) => normalizeVin(vehicle.vin) === key) ?? null;
 }
 
 export function subscribeToAllVehicles(
@@ -93,8 +115,6 @@ export function subscribeToUserVehicles(
     return () => {};
   }
 
-  // Solo filtramos por userId (sin orderBy en Firestore) para que los registros
-  // nuevos aparezcan de inmediato y no haga falta un índice compuesto.
   const vehiclesQuery = query(
     collection(db, VEHICLES_COLLECTION),
     where('userId', '==', userId),
@@ -129,32 +149,68 @@ export async function createVehicle(
       ? await uploadVehicleImages(userId, vehicleRef.id, input.imagesUrls)
       : [];
 
-  const createdAt = new Date().toISOString();
+  const createdAtIso = new Date().toISOString();
 
   await setDoc(vehicleRef, {
     userId,
     createdByEmail,
-    vin: input.vin.trim(),
+    vin: normalizeVin(input.vin),
     model: input.model,
     type: input.type,
     status: 'pendiente',
     color: input.color,
     comments: input.comments.trim(),
     imagesUrls: imageUrls,
-    createdAt,
+    createdAt: serverTimestamp(),
+    createdAtIso,
   });
 
   return {
     id: vehicleRef.id,
     userId,
     createdByEmail,
-    vin: input.vin.trim(),
+    vin: normalizeVin(input.vin),
     model: input.model,
     type: input.type,
     status: 'pendiente',
     color: input.color,
     comments: input.comments.trim(),
     imagesUrls: imageUrls,
-    createdAt,
+    createdAt: createdAtIso,
   };
+}
+
+export async function updateVehicle(
+  userId: string,
+  vehicleId: string,
+  input: UpdateVehicleInput,
+): Promise<{ imageUrls: string[]; updatedAtIso: string }> {
+  if (!db) {
+    throw new Error('Firestore is not configured.');
+  }
+
+  const localUris = input.imagesUrls.filter(
+    (uri) => !uri.startsWith('http://') && !uri.startsWith('https://'),
+  );
+  const keptRemoteUrls = input.imagesUrls.filter(
+    (uri) => uri.startsWith('http://') || uri.startsWith('https://'),
+  );
+
+  const uploadedUrls =
+    localUris.length > 0 ? await uploadVehicleImages(userId, vehicleId, localUris) : [];
+
+  const imageUrls = [...keptRemoteUrls, ...uploadedUrls];
+  const updatedAtIso = new Date().toISOString();
+
+  await updateDoc(doc(db, VEHICLES_COLLECTION, vehicleId), {
+    model: input.model,
+    type: input.type,
+    color: input.color,
+    comments: input.comments.trim(),
+    imagesUrls: imageUrls,
+    updatedAt: serverTimestamp(),
+    updatedAtIso,
+  });
+
+  return { imageUrls, updatedAtIso };
 }

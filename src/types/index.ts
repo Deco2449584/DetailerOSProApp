@@ -1,18 +1,12 @@
-export type VehicleType = 'nuevo' | 'usado' | 'redetailing';
+export type VehicleType = string;
 
 export type VehicleStatus = 'pendiente' | 'en_proceso' | 'completado' | 'entregado';
 
-export type TeslaColor =
-  | 'Pearl White Multi-Coat'
-  | 'Solid Black'
-  | 'Deep Blue Metallic'
-  | 'Stealth Grey'
-  | 'Ultra Red'
-  | 'Quicksilver'
-  | 'Otro';
+export type TeslaColor = string;
 
-export type TeslaModel = 'Model 3' | 'Model Y' | 'Model S' | 'Model X' | 'Cybertruck';
+export type TeslaModel = string;
 
+/** @deprecated Use catalog from Firebase via useVehicleCatalog() */
 export const TESLA_MODELS: TeslaModel[] = [
   'Model 3',
   'Model Y',
@@ -21,6 +15,7 @@ export const TESLA_MODELS: TeslaModel[] = [
   'Cybertruck',
 ];
 
+/** @deprecated Use catalog from Firebase via useVehicleCatalog() */
 export const TESLA_COLORS: TeslaColor[] = [
   'Pearl White Multi-Coat',
   'Solid Black',
@@ -36,20 +31,23 @@ export interface Vehicle {
   userId: string;
   createdByEmail: string;
   vin: string;
-  model: TeslaModel;
+  model: string;
   type: VehicleType;
   status: VehicleStatus;
-  color: TeslaColor;
+  color: string;
   comments: string;
   imagesUrls: string[];
   createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 export type NewVehicleInput = {
   vin: string;
-  model: TeslaModel;
+  model: string;
   type: VehicleType;
-  color: TeslaColor;
+  color: string;
   comments: string;
   imagesUrls: string[];
 };
+
+export type UpdateVehicleInput = Omit<NewVehicleInput, 'vin'>;

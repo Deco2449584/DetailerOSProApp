@@ -116,7 +116,27 @@ Comprueba:
 npx eas env:list --environment preview
 ```
 
-## 7. Estructura de datos
+## 7. Catálogo (modelos, colores, tipos)
+
+Documento Firestore: **`config/vehicle-catalog`**
+
+```json
+{
+  "models": ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"],
+  "colors": ["Pearl White Multi-Coat", "Solid Black", "..."],
+  "types": [
+    { "value": "nuevo", "label": "New" },
+    { "value": "usado", "label": "Used" },
+    { "value": "redetailing", "label": "Redetailing" }
+  ]
+}
+```
+
+- Crea el documento manualmente en la consola o deja que un **admin** lo cree.
+- Si no existe, la app usa valores por defecto (los de arriba).
+- Publica las reglas de `firebase/firestore.rules` (incluye lectura de `config` para usuarios autenticados).
+
+## 8. Estructura de datos
 
 Colección **`vehicles`** (documento por inspección):
 
@@ -131,9 +151,11 @@ Colección **`vehicles`** (documento por inspección):
 | color       | string   | Color Tesla                          |
 | comments    | string   | Comentarios                          |
 | imagesUrls  | string[] | URLs públicas de descarga (Storage)  |
-| createdAt   | timestamp| Fecha de creación                    |
+| createdAt   | timestamp / ISO | Fecha y hora exacta de creación |
+| createdAtIso | string (ISO) | Hora local exacta al guardar |
+| updatedAt   | timestamp / ISO | Última modificación (si aplica) |
 
-## 8. Comprobar en la app
+## 9. Comprobar en la app
 
 1. Inicia sesión con un usuario de Auth.
 2. Escanea un VIN y adjunta fotos.
@@ -141,7 +163,7 @@ Colección **`vehicles`** (documento por inspección):
    - **Firestore** → colección `vehicles` → nuevo documento
    - **Storage** → carpeta `vehicles/{tu-uid}/...` → archivos de imagen
 
-## 9. Errores frecuentes
+## 10. Errores frecuentes
 
 | Error | Solución |
 |-------|----------|

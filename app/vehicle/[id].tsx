@@ -14,13 +14,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
 import { shareVehiclePdf } from '@/utils/vehiclePdf';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
 import { formatVehicleDate } from '@/utils/formatDate';
-import { STATUS_COLORS, STATUS_LABELS, TYPE_COLORS, TYPE_LABELS } from '@/utils/vehicleLabels';
+import { getTypeColor, STATUS_COLORS, STATUS_LABELS } from '@/utils/vehicleLabels';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PHOTO_WIDTH = SCREEN_WIDTH - 40;
@@ -54,6 +55,7 @@ export default function VehicleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAdmin } = useAuth();
+  const { getTypeLabel } = useVehicleCatalog();
   const { vehicles, isLoading } = useVehicles();
   const [isPdfLoading, setIsPdfLoading] = useState(false);
 
@@ -84,7 +86,7 @@ export default function VehicleDetailScreen() {
   }
 
   const statusStyle = STATUS_COLORS[vehicle.status];
-  const typeStyle = TYPE_COLORS[vehicle.type];
+  const typeStyle = getTypeColor(vehicle.type);
 
   const handleExportPdf = async () => {
     setIsPdfLoading(true);
@@ -116,7 +118,7 @@ export default function VehicleDetailScreen() {
             textColor={statusStyle.text}
           />
           <Badge
-            label={TYPE_LABELS[vehicle.type]}
+            label={getTypeLabel(vehicle.type)}
             backgroundColor={typeStyle.bg}
             textColor={typeStyle.text}
           />
@@ -144,10 +146,13 @@ export default function VehicleDetailScreen() {
           ) : null}
           <DetailRow label="VIN" value={vehicle.vin} />
           <DetailRow label="Model" value={vehicle.model} />
-          <DetailRow label="Type" value={TYPE_LABELS[vehicle.type]} />
+          <DetailRow label="Type" value={getTypeLabel(vehicle.type)} />
           <DetailRow label="Status" value={STATUS_LABELS[vehicle.status]} />
           <DetailRow label="Colour" value={vehicle.color} />
           <DetailRow label="Registered" value={formatVehicleDate(vehicle.createdAt)} />
+          {vehicle.updatedAt ? (
+            <DetailRow label="Last updated" value={formatVehicleDate(vehicle.updatedAt)} />
+          ) : null}
         </View>
 
         <View style={styles.card}>

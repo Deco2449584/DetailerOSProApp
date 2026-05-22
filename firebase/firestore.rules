@@ -12,6 +12,11 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /config/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
     match /vehicles/{vehicleId} {
       allow read: if request.auth != null
         && (resource.data.userId == request.auth.uid || isAdmin());

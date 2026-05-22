@@ -15,35 +15,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EvidencePhotosField } from '@/components/EvidencePhotosField';
 import { OptionGroup } from '@/components/OptionGroup';
+import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
-import {
-  TESLA_COLORS,
-  TESLA_MODELS,
-  type TeslaColor,
-  type TeslaModel,
-  type VehicleType,
-} from '@/types';
+import type { Vehicle } from '@/types';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
-import { TYPE_LABELS } from '@/utils/vehicleLabels';
-
-const VEHICLE_TYPES = ['nuevo', 'usado', 'redetailing'] as const;
+import { normalizeVin } from '@/utils/vin';
 
 export default function ScannerScreen() {
   const router = useRouter();
-  const { addVehicle } = useVehicles();
+  const { catalog, isLoading: catalogLoading, getTypeLabel } = useVehicleCatalog();
+  const { findByVin, addVehicle, updateVehicleById } = useVehicles();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [isScanning, setIsScanning] = useState(true);
   const [scannedVin, setScannedVin] = useState<string | null>(null);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [model, setModel] = useState<TeslaModel>('Model 3');
-  const [type, setType] = useState<VehicleType>('nuevo');
-  const [vehicleColor, setVehicleColor] = useState<TeslaColor>('Pearl White Multi-Coat');
+  const [model, setModel] = useState('');
+  const [type, setType] = useState('');
+  const [vehicleColor, setVehicleColor] = useState('');
   const [comments, setComments] = useState('');
   const [evidencePhotos, setEvidencePhotos] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (catalogLoading) return;
+    if (!model && catalog.models[0]) setModel(catalog.models[0]);
+    if (!type && catalog.types[0]) setType(catalog.types[0].value);
+    if (!vehicleColor && catalog.colors[0]) setVehicleColor(catalog.colors[0]);
+  }, [catalogLoading, catalog, model, type, vehicleColor]);
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -51,41 +53,117 @@ export default function ScannerScreen() {
     }
   }, [permission, requestPermission]);
 
+  const resetFormDefaults = useCallback(() => {
+    setModel(catalog.models[0] ?? '');
+    setType(catalog.types[0]?.value ?? '');
+    setVehicleColor(catalog.colors[0] ?? '');
+    setComments('');
+    setEvidencePhotos([]);
+    setEditingVehicleId(null);
+  }, [catalog]);
+
+  const loadVehicleForEdit = useCallback((vehicle: Vehicle) => {
+    setEditingVehicleId(vehicle.id);
+    setScannedVin(vehicle.vin);
+    setModel(vehicle.model);
+    setType(vehicle.type);
+    setVehicleColor(vehicle.color);
+    setComments(vehicle.comments);
+    setEvidencePhotos(vehicle.imagesUrls);
+    setIsScanning(false);
+  }, []);
+
+  const promptDuplicateVin = useCallback(
+    (vin: string, existing: Vehicle) => {
+      Alert.alert(
+        'VIN already registered',
+        `This VIN is already in the system (${existing.model}). Do you want to modify the existing record?`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              setIsScanning(true);
+              setScannedVin(null);
+              resetFormDefaults();
+            },
+          },
+          {
+            text: 'Modify',
+            onPress: () => loadVehicleForEdit(existing),
+          },
+        ],
+      );
+    },
+    [loadVehicleForEdit, resetFormDefaults],
+  );
+
   const handleBarcodeScanned = useCallback(
     ({ data }: BarcodeScanningResult) => {
       if (!isScanning || !data) return;
-      setScannedVin(data.trim());
+
+      const vin = normalizeVin(data);
+      const existing = findByVin(vin);
+
+      if (existing) {
+        promptDuplicateVin(vin, existing);
+        return;
+      }
+
+      setScannedVin(vin);
+      setEditingVehicleId(null);
       setIsScanning(false);
     },
-    [isScanning],
+    [isScanning, findByVin, promptDuplicateVin],
   );
 
   const handleScanAgain = () => {
     setScannedVin(null);
     setIsScanning(true);
-    setModel('Model 3');
-    setType('nuevo');
-    setVehicleColor('Pearl White Multi-Coat');
-    setComments('');
-    setEvidencePhotos([]);
+    resetFormDefaults();
   };
 
   const handleSave = async () => {
     if (!scannedVin?.trim() || isSaving) return;
 
+    const payload = {
+      model,
+      type,
+      color: vehicleColor,
+      comments,
+      imagesUrls: evidencePhotos,
+    };
+
     setIsSaving(true);
     try {
-      await addVehicle({
-        vin: scannedVin.trim(),
-        model,
-        type,
-        color: vehicleColor,
-        comments,
-        imagesUrls: evidencePhotos,
-      });
+      if (editingVehicleId) {
+        await updateVehicleById(editingVehicleId, payload);
+      } else {
+        const duplicate = findByVin(scannedVin);
+        if (duplicate) {
+          setIsSaving(false);
+          promptDuplicateVin(scannedVin, duplicate);
+          return;
+        }
+
+        await addVehicle({
+          vin: scannedVin,
+          ...payload,
+        });
+      }
       router.replace('/(tabs)' as Href);
-    } catch {
-      Alert.alert('Error', 'Could not save the record. Please try again.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (message === 'DUPLICATE_VIN') {
+        const duplicate = findByVin(scannedVin);
+        if (duplicate) {
+          promptDuplicateVin(scannedVin, duplicate);
+        } else {
+          Alert.alert('Duplicate VIN', 'This VIN is already registered.');
+        }
+      } else {
+        Alert.alert('Error', 'Could not save the record. Please try again.');
+      }
       setIsSaving(false);
     }
   };
@@ -156,7 +234,9 @@ export default function ScannerScreen() {
             <Text style={styles.backButtonFormText}>← Back to panel</Text>
           </Pressable>
 
-          <Text style={styles.formTitle}>Vehicle inspection</Text>
+          <Text style={styles.formTitle}>
+            {editingVehicleId ? 'Modify inspection' : 'Vehicle inspection'}
+          </Text>
 
           <View style={styles.vinBox}>
             <Text style={styles.vinLabel}>Scanned VIN</Text>
@@ -169,19 +249,24 @@ export default function ScannerScreen() {
           </View>
 
           <View style={styles.formCard}>
-            <OptionGroup label="Model" options={TESLA_MODELS} value={model} onChange={setModel} />
+            <OptionGroup
+              label="Model"
+              options={catalog.models}
+              value={model}
+              onChange={setModel}
+            />
 
             <OptionGroup
               label="Type"
-              options={VEHICLE_TYPES}
+              options={catalog.types.map((item) => item.value)}
               value={type}
               onChange={setType}
-              getLabel={(option) => TYPE_LABELS[option]}
+              getLabel={(option) => getTypeLabel(option)}
             />
 
             <OptionGroup
               label="Official Tesla colour"
-              options={TESLA_COLORS}
+              options={catalog.colors}
               value={vehicleColor}
               onChange={setVehicleColor}
             />
@@ -214,7 +299,9 @@ export default function ScannerScreen() {
             {isSaving ? (
               <ActivityIndicator color={colors.text.onAccent} />
             ) : (
-              <Text style={styles.primaryButtonText}>Save & Continue</Text>
+              <Text style={styles.primaryButtonText}>
+                {editingVehicleId ? 'Update record' : 'Save & Continue'}
+              </Text>
             )}
           </Pressable>
 
