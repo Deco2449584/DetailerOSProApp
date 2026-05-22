@@ -23,7 +23,10 @@ EXPO_PUBLIC_FIREBASE_PROJECT_ID=tu_proyecto
 EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=tu_proyecto.firebasestorage.app
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+EXPO_PUBLIC_ADMIN_EMAILS=admin@fineshine.com.au,otro@empresa.com
 ```
+
+`EXPO_PUBLIC_ADMIN_EMAILS` es una lista separada por comas. Esos correos reciben rol **admin** al iniciar sesión (pestaña Admin, exportar CSV/Excel y PDF).
 
 3. Reinicia Metro después de cambiar `.env`:
 
@@ -44,17 +47,30 @@ npm run start:clear
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /vehicles/{vehicleId} {
       allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+        && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+        && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }
 ```
+
+También puedes asignar admin manualmente en Firestore: colección `users` → documento `{uid}` → campo `role: "admin"`.
 
 ## 5. Reglas de Storage
 
@@ -65,7 +81,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /vehicles/{userId}/{vehicleId}/{fileName} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      function isAdmin() {
+        return request.auth != null
+          && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
@@ -95,6 +115,7 @@ Colección **`vehicles`** (documento por inspección):
 | Campo        | Tipo     | Descripción                          |
 |-------------|----------|--------------------------------------|
 | userId      | string   | UID de Auth (dueño del registro)     |
+| createdByEmail | string | Email del operario que creó el registro |
 | vin         | string   | VIN escaneado                        |
 | model       | string   | Modelo Tesla                         |
 | type        | string   | `nuevo` \| `usado` \| `redetailing`  |

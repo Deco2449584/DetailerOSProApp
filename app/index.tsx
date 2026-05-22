@@ -19,7 +19,7 @@ export default function IndexScreen() {
     return <Redirect href="/login" />;
   }
 
-  return <Redirect href="/dashboard" />;
+  return <Redirect href="/(tabs)" />;
 }
 
 const styles = StyleSheet.create({

@@ -17,6 +17,7 @@ const VEHICLES_COLLECTION = 'vehicles';
 
 export type VehicleDocument = {
   userId: string;
+  createdByEmail?: string;
   vin: string;
   model: Vehicle['model'];
   type: Vehicle['type'];
@@ -46,6 +47,8 @@ function sortByNewest(vehicles: Vehicle[]): Vehicle[] {
 function mapDocumentToVehicle(id: string, data: VehicleDocument): Vehicle {
   return {
     id,
+    userId: data.userId,
+    createdByEmail: data.createdByEmail ?? '',
     vin: data.vin,
     model: data.model,
     type: data.type,
@@ -55,6 +58,29 @@ function mapDocumentToVehicle(id: string, data: VehicleDocument): Vehicle {
     imagesUrls: data.imagesUrls ?? [],
     createdAt: toIsoDate(data.createdAt),
   };
+}
+
+export function subscribeToAllVehicles(
+  onData: (vehicles: Vehicle[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  if (!db) {
+    onError(new Error('Firestore is not configured.'));
+    return () => {};
+  }
+
+  return onSnapshot(
+    collection(db, VEHICLES_COLLECTION),
+    (snapshot) => {
+      const vehicles = sortByNewest(
+        snapshot.docs.map((document) =>
+          mapDocumentToVehicle(document.id, document.data() as VehicleDocument),
+        ),
+      );
+      onData(vehicles);
+    },
+    (error) => onError(error),
+  );
 }
 
 export function subscribeToUserVehicles(
@@ -88,7 +114,11 @@ export function subscribeToUserVehicles(
   );
 }
 
-export async function createVehicle(userId: string, input: NewVehicleInput): Promise<Vehicle> {
+export async function createVehicle(
+  userId: string,
+  input: NewVehicleInput,
+  createdByEmail: string,
+): Promise<Vehicle> {
   if (!db) {
     throw new Error('Firestore is not configured.');
   }
@@ -103,6 +133,7 @@ export async function createVehicle(userId: string, input: NewVehicleInput): Pro
 
   await setDoc(vehicleRef, {
     userId,
+    createdByEmail,
     vin: input.vin.trim(),
     model: input.model,
     type: input.type,
@@ -115,6 +146,8 @@ export async function createVehicle(userId: string, input: NewVehicleInput): Pro
 
   return {
     id: vehicleRef.id,
+    userId,
+    createdByEmail,
     vin: input.vin.trim(),
     model: input.model,
     type: input.type,

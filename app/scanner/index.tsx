@@ -83,7 +83,7 @@ export default function ScannerScreen() {
         comments,
         imagesUrls: evidencePhotos,
       });
-      router.replace('/dashboard' as Href);
+      router.replace('/(tabs)' as Href);
     } catch {
       Alert.alert('Error', 'Could not save the record. Please try again.');
       setIsSaving(false);

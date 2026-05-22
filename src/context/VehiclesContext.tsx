@@ -9,8 +9,12 @@ import {
 } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
-import { createVehicle, subscribeToUserVehicles } from '@/services/vehicleRepository';
 import { isFirebaseConfigured } from '@/services/firebaseConfig';
+import {
+  createVehicle,
+  subscribeToAllVehicles,
+  subscribeToUserVehicles,
+} from '@/services/vehicleRepository';
 import type { NewVehicleInput, Vehicle } from '@/types';
 
 export type { NewVehicleInput };
@@ -25,7 +29,7 @@ type VehiclesContextValue = {
 const VehiclesContext = createContext<VehiclesContextValue | undefined>(undefined);
 
 export function VehiclesProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,21 +52,23 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
 
-    const unsubscribe = subscribeToUserVehicles(
-      user.uid,
-      (nextVehicles) => {
-        setVehicles(nextVehicles);
-        setIsLoading(false);
-        setError(null);
-      },
-      (subscriptionError) => {
-        setError(subscriptionError.message);
-        setIsLoading(false);
-      },
-    );
+    const onData = (nextVehicles: Vehicle[]) => {
+      setVehicles(nextVehicles);
+      setIsLoading(false);
+      setError(null);
+    };
+
+    const onError = (subscriptionError: Error) => {
+      setError(subscriptionError.message);
+      setIsLoading(false);
+    };
+
+    const unsubscribe = isAdmin
+      ? subscribeToAllVehicles(onData, onError)
+      : subscribeToUserVehicles(user.uid, onData, onError);
 
     return unsubscribe;
-  }, [user?.uid]);
+  }, [user?.uid, isAdmin]);
 
   const addVehicle = useCallback(
     async (input: NewVehicleInput): Promise<Vehicle> => {
@@ -70,7 +76,7 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
         throw new Error('You must be signed in to save a record.');
       }
 
-      const vehicle = await createVehicle(user.uid, input);
+      const vehicle = await createVehicle(user.uid, input, user.email ?? '');
 
       setVehicles((prev) => {
         const withoutDuplicate = prev.filter((item) => item.id !== vehicle.id);

@@ -1,9 +1,8 @@
-import { Redirect, useRouter, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -21,6 +20,7 @@ import type { Vehicle, VehicleType } from '@/types';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
+import { getRoleLabel } from '@/services/userRepository';
 
 const TYPE_ACCENTS: Record<VehicleType, string> = {
   nuevo: colors.accent.primary,
@@ -32,9 +32,9 @@ function countByType(vehicles: Vehicle[], type: VehicleType): number {
   return vehicles.filter((v) => v.type === type).length;
 }
 
-export default function DashboardScreen() {
+export default function RecordsScreen() {
   const router = useRouter();
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isAdmin, role, isLoading: authLoading } = useAuth();
   const { vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
 
   const counts = useMemo(
@@ -47,6 +47,7 @@ export default function DashboardScreen() {
   );
 
   const isLoading = authLoading || vehiclesLoading;
+  const greetingName = user?.email?.split('@')[0] ?? 'Operator';
 
   if (isLoading) {
     return (
@@ -55,16 +56,6 @@ export default function DashboardScreen() {
       </View>
     );
   }
-
-  if (!user) {
-    return <Redirect href="/login" />;
-  }
-
-  const greetingName = user.email?.split('@')[0] ?? 'Operator';
-
-  const handleStartScan = () => {
-    router.push('/scanner' as Href);
-  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -93,12 +84,10 @@ export default function DashboardScreen() {
                 <Text style={styles.headerSubtitle}>
                   {brand.panelTitle} · {brand.location}
                 </Text>
+                {isAdmin ? (
+                  <Text style={styles.adminBadge}>All team records · {getRoleLabel(role)}</Text>
+                ) : null}
               </View>
-              <Pressable
-                style={({ pressed }) => [styles.signOutBtn, pressed && styles.signOutPressed]}
-                onPress={signOut}>
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </Pressable>
             </View>
 
             <View style={styles.statsRow}>
@@ -122,22 +111,15 @@ export default function DashboardScreen() {
               />
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.scanButton,
-                pressed && styles.scanButtonPressed,
-              ]}
-              onPress={handleStartScan}>
-              <Text style={styles.scanButtonText}>Start Scan (Read VIN)</Text>
-            </Pressable>
-
             {vehiclesError ? (
               <Text style={styles.errorBanner}>
                 Could not load records: {vehiclesError}
               </Text>
             ) : null}
 
-            <Text style={styles.sectionTitle}>Recent Records</Text>
+            <Text style={styles.sectionTitle}>
+              {isAdmin ? 'All records' : 'Recent records'}
+            </Text>
             {vehicles.length > 0 ? (
               <Text style={styles.sectionHint}>Tap a record to view details and photos</Text>
             ) : null}
@@ -148,7 +130,7 @@ export default function DashboardScreen() {
             <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
             <Text style={styles.emptyTitle}>No records yet</Text>
             <Text style={styles.emptyHint}>
-              Scan a vehicle VIN to create your first inspection record.
+              Use the Scan tab to create your first inspection record.
             </Text>
           </View>
         }
@@ -182,14 +164,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 24,
-    gap: 12,
   },
   headerText: {
-    flex: 1,
     gap: 4,
   },
   greeting: {
@@ -202,46 +179,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
   },
-  signOutBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  signOutPressed: {
-    opacity: 0.7,
-  },
-  signOutText: {
+  adminBadge: {
+    fontFamily: fonts.bodyMedium,
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.secondary,
+    color: colors.accent.primary,
+    marginTop: 4,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 10,
     marginBottom: 20,
-  },
-  scanButton: {
-    backgroundColor: colors.accent.primary,
-    borderRadius: 14,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginBottom: 28,
-    shadowColor: colors.accent.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  scanButtonPressed: {
-    backgroundColor: colors.accent.primaryPressed,
-  },
-  scanButtonText: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 17,
-    color: colors.text.onAccent,
-    letterSpacing: 0.3,
   },
   errorBanner: {
     fontFamily: fonts.body,

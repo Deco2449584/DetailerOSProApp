@@ -33,6 +33,8 @@ export const TESLA_COLORS: TeslaColor[] = [
 
 export interface Vehicle {
   id: string;
+  userId: string;
+  createdByEmail: string;
   vin: string;
   model: TeslaModel;
   type: VehicleType;

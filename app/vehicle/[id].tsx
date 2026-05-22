@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Pressable,
   ScrollView,
@@ -12,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/context/AuthContext';
 import { useVehicles } from '@/context/VehiclesContext';
+import { shareVehiclePdf } from '@/utils/vehiclePdf';
 import { brand } from '@/theme/brand';
 import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
@@ -50,7 +53,9 @@ function Badge({
 export default function VehicleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { isAdmin } = useAuth();
   const { vehicles, isLoading } = useVehicles();
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const vehicle = useMemo(
     () => vehicles.find((item) => item.id === id),
@@ -81,6 +86,17 @@ export default function VehicleDetailScreen() {
   const statusStyle = STATUS_COLORS[vehicle.status];
   const typeStyle = TYPE_COLORS[vehicle.type];
 
+  const handleExportPdf = async () => {
+    setIsPdfLoading(true);
+    try {
+      await shareVehiclePdf(vehicle);
+    } catch {
+      Alert.alert('PDF failed', 'Could not generate or share the report. Please try again.');
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -106,7 +122,26 @@ export default function VehicleDetailScreen() {
           />
         </View>
 
+        {isAdmin ? (
+          <Pressable
+            style={({ pressed }) => [styles.pdfBtn, pressed && styles.pdfBtnPressed]}
+            onPress={handleExportPdf}
+            disabled={isPdfLoading}>
+            {isPdfLoading ? (
+              <ActivityIndicator color={colors.text.onAccent} />
+            ) : (
+              <>
+                <Text style={styles.pdfBtnText}>Export PDF report</Text>
+                <Text style={styles.pdfBtnHint}>Share vehicle inspection document</Text>
+              </>
+            )}
+          </Pressable>
+        ) : null}
+
         <View style={styles.card}>
+          {isAdmin && vehicle.createdByEmail ? (
+            <DetailRow label="Operator" value={vehicle.createdByEmail} />
+          ) : null}
           <DetailRow label="VIN" value={vehicle.vin} />
           <DetailRow label="Model" value={vehicle.model} />
           <DetailRow label="Type" value={TYPE_LABELS[vehicle.type]} />
@@ -189,6 +224,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  pdfBtn: {
+    backgroundColor: colors.accent.primary,
+    borderRadius: 14,
+    padding: 16,
+    gap: 4,
+    alignItems: 'center',
+  },
+  pdfBtnPressed: {
+    backgroundColor: colors.accent.primaryPressed,
+  },
+  pdfBtnText: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 16,
+    color: colors.text.onAccent,
+  },
+  pdfBtnHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
   },
   badge: {
     paddingHorizontal: 10,

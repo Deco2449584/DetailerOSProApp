@@ -15,9 +15,14 @@ import {
 } from 'react';
 
 import { auth, isFirebaseConfigured } from '@/services/firebaseConfig';
+import { ensureUserProfile } from '@/services/userRepository';
+import type { UserProfile, UserRole } from '@/types/auth';
 
 type AuthContextValue = {
   user: User | null;
+  role: UserRole;
+  isAdmin: boolean;
+  profile: UserProfile | null;
   isLoading: boolean;
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -28,6 +33,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,9 +42,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      setIsLoading(false);
+
+      if (!firebaseUser) {
+        setProfile(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const nextProfile = await ensureUserProfile(firebaseUser);
+        setProfile(nextProfile);
+      } catch {
+        setProfile(null);
+      } finally {
+        setIsLoading(false);
+      }
     });
 
     return unsubscribe;
@@ -48,23 +68,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) {
       throw new Error('Firebase is not configured for this build.');
     }
-    await signInWithEmailAndPassword(auth, email.trim(), password);
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const signOut = useCallback(async () => {
     if (!auth) return;
     await firebaseSignOut(auth);
+    setProfile(null);
   }, []);
+
+  const role: UserRole = profile?.role ?? 'operator';
+  const isAdmin = role === 'admin';
 
   const value = useMemo(
     () => ({
       user,
+      role,
+      isAdmin,
+      profile,
       isLoading,
       isConfigured: isFirebaseConfigured,
       signIn,
       signOut,
     }),
-    [user, isLoading, signIn, signOut],
+    [user, role, isAdmin, profile, isLoading, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
