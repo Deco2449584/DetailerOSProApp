@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ColorPickerCarousel } from '@/components/ColorPickerCarousel';
 import { EvidencePhotosField } from '@/components/EvidencePhotosField';
 import { OptionGroup } from '@/components/OptionGroup';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
@@ -287,10 +288,17 @@ export default function ScannerScreen() {
 
   const showForm = !isScanning && scannedVin !== null;
 
+  const formTitle =
+    effectiveMode === 'admin-edit'
+      ? 'Edit inspection'
+      : effectiveMode === 'append'
+        ? 'Add to existing record'
+        : 'New inspection';
+
   const formBottomPadding = Math.max(insets.bottom, 16) + 24;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
       {isScanning ? (
         <View style={styles.cameraContainer}>
           <CameraView
@@ -300,12 +308,15 @@ export default function ScannerScreen() {
             onBarcodeScanned={handleBarcodeScanned}
           />
           <View style={styles.overlay}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← Back</Text>
-            </Pressable>
-            <Text style={styles.scanTitle}>Scan VIN (QR)</Text>
+            <ScreenHeader
+              variant="overlay"
+              title="Scan VIN"
+              subtitle={`${brand.name} · Point at QR code`}
+              onBack={() => router.back()}
+              backLabel="Back"
+            />
             <Text style={styles.scanHint}>
-              {brand.name} · Point at the vehicle QR code
+              Align the QR code inside the frame
             </Text>
             <View style={styles.frameContainer}>
               <View style={styles.frame}>
@@ -324,26 +335,21 @@ export default function ScannerScreen() {
           </View>
         </View>
       ) : showForm ? (
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
-          <ScrollView
-            contentContainerStyle={[styles.formContent, { paddingBottom: formBottomPadding }]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
-            <Pressable style={styles.backButtonForm} onPress={() => router.back()}>
-              <Text style={styles.backButtonFormText}>← Back to panel</Text>
-            </Pressable>
-
-            <Text style={styles.formTitle}>
-              {effectiveMode === 'admin-edit'
-                ? 'Edit inspection'
-                : effectiveMode === 'append'
-                  ? 'Add to existing record'
-                  : 'Vehicle inspection'}
-            </Text>
-
+        <>
+          <ScreenHeader
+            title={formTitle}
+            subtitle={scannedVin ?? undefined}
+            onBack={() => router.back()}
+            backLabel="Records"
+          />
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
+            <ScrollView
+              contentContainerStyle={[styles.formContent, { paddingBottom: formBottomPadding }]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
             {effectiveMode === 'append' ? (
               <Text style={styles.formHint}>
                 Model, type and colour cannot be changed. Add new comments or photos below.
@@ -463,8 +469,9 @@ export default function ScannerScreen() {
                 <Text style={styles.secondaryButtonText}>Scan again</Text>
               </Pressable>
             ) : null}
-          </ScrollView>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </>
       ) : null}
     </SafeAreaView>
   );
@@ -498,30 +505,14 @@ function createScannerStyles(colors: AppColors) {
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  backButtonText: {
-    color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scanTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 22,
-    color: colors.text.primary,
-    marginBottom: 8,
   },
   scanHint: {
     fontSize: 14,
-    color: colors.text.secondary,
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    paddingHorizontal: 24,
+    fontFamily: fonts.body,
   },
   frameContainer: {
     flex: 1,
@@ -584,20 +575,8 @@ function createScannerStyles(colors: AppColors) {
   },
   formContent: {
     padding: 20,
-    gap: 20,
-  },
-  backButtonForm: {
-    alignSelf: 'flex-start',
-  },
-  backButtonFormText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.accent.primary,
-  },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text.primary,
+    paddingTop: 8,
+    gap: 16,
   },
   formHint: {
     fontSize: 14,

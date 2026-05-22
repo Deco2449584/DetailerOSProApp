@@ -16,6 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
@@ -44,60 +45,46 @@ function createDetailStyles(colors: AppColors) {
       alignItems: 'center',
       backgroundColor: colors.background.primary,
     },
+    flex: {
+      flex: 1,
+    },
+    scroll: {
+      flex: 1,
+    },
     content: {
-      padding: 20,
-      gap: 16,
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 16,
+      gap: 14,
     },
-    headerEditBtn: {
-      marginRight: 4,
+    heroCard: {
+      backgroundColor: colors.surface.card,
+      borderRadius: 14,
+      padding: 16,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
     },
-    subtitle: {
-      fontSize: 14,
-      color: colors.text.secondary,
-      marginTop: -4,
+    heroModel: {
+      fontFamily: fonts.heading,
+      fontSize: 22,
+      color: colors.text.onSurface,
+    },
+    heroVin: {
+      fontFamily: 'monospace',
+      fontSize: 13,
+      color: colors.text.onSurfaceMuted,
+      letterSpacing: 0.3,
+    },
+    heroMeta: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.text.onSurfaceMuted,
     },
     badges: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
-    },
-    actionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.accent.primary,
-      backgroundColor: 'rgba(226, 31, 40, 0.08)',
-    },
-    actionBtnPressed: {
-      opacity: 0.85,
-    },
-    actionBtnText: {
-      fontFamily: fonts.headingSemiBold,
-      fontSize: 15,
-      color: colors.accent.primary,
-    },
-    pdfBtnOutline: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      borderRadius: 14,
-      borderWidth: 2,
-      borderColor: colors.accent.primary,
-      paddingVertical: 14,
-      marginTop: 8,
-    },
-    pdfBtnOutlinePressed: {
-      backgroundColor: 'rgba(226, 31, 40, 0.08)',
-    },
-    pdfBtnOutlineText: {
-      fontFamily: fonts.headingSemiBold,
-      fontSize: 16,
-      color: colors.accent.primary,
     },
     badge: {
       paddingHorizontal: 10,
@@ -165,6 +152,69 @@ function createDetailStyles(colors: AppColors) {
       color: colors.text.onSurfaceMuted,
       fontStyle: 'italic',
     },
+    footer: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      gap: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border.default,
+      backgroundColor: colors.background.primary,
+    },
+    footerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.accent.primary,
+      backgroundColor: 'rgba(226, 31, 40, 0.08)',
+    },
+    footerBtnPressed: {
+      opacity: 0.85,
+    },
+    footerBtnText: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 15,
+      color: colors.accent.primary,
+    },
+    footerBtnPrimary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: colors.accent.primary,
+    },
+    footerBtnPrimaryPressed: {
+      backgroundColor: colors.accent.primaryPressed,
+    },
+    footerBtnPrimaryText: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 16,
+      color: colors.text.onAccent,
+    },
+    footerBtnOutline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      paddingVertical: 14,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.accent.primary,
+      backgroundColor: colors.surface.card,
+    },
+    footerBtnOutlinePressed: {
+      backgroundColor: 'rgba(226, 31, 40, 0.08)',
+    },
+    footerBtnOutlineText: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 16,
+      color: colors.accent.primary,
+    },
     notFound: {
       flex: 1,
       justifyContent: 'center',
@@ -175,6 +225,9 @@ function createDetailStyles(colors: AppColors) {
       fontSize: 20,
       fontWeight: '700',
       color: colors.text.primary,
+    },
+    headerIconBtn: {
+      padding: 4,
     },
   });
 }
@@ -275,15 +328,9 @@ export default function VehicleDetailScreen() {
   if (!vehicle) {
     return (
       <>
-        <Stack.Screen
-          options={{
-            title: 'Record',
-            headerStyle: { backgroundColor: colors.background.primary },
-            headerTintColor: colors.text.primary,
-            headerShadowVisible: false,
-          }}
-        />
-        <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+          <ScreenHeader title="Record" onBack={() => router.back()} />
           <View style={styles.notFound}>
             <Text style={styles.notFoundTitle}>Record not found</Text>
           </View>
@@ -297,60 +344,50 @@ export default function VehicleDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: vehicle.model,
-          headerStyle: { backgroundColor: colors.background.primary },
-          headerTintColor: colors.text.primary,
-          headerTitleStyle: { fontFamily: fonts.headingSemiBold, color: colors.text.primary },
-          headerShadowVisible: false,
-          headerRight: isAdmin
-            ? () => (
-                <Pressable onPress={handleAdminEdit} hitSlop={12} style={styles.headerEditBtn}>
-                  <Ionicons name="create-outline" size={24} color={colors.accent.primary} />
-                </Pressable>
-              )
-            : undefined,
-        }}
-      />
-      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+        <ScreenHeader
+          title="Vehicle details"
+          subtitle={brand.name}
+          onBack={() => router.back()}
+          backLabel="Records"
+          rightElement={
+            isAdmin ? (
+              <Pressable onPress={handleAdminEdit} hitSlop={12} style={styles.headerIconBtn}>
+                <Ionicons name="create-outline" size={24} color={colors.accent.primary} />
+              </Pressable>
+            ) : null
+          }
+        />
+
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>{brand.name} · Vehicle details</Text>
-
-          <View style={styles.badges}>
-            <Badge
-              label={STATUS_LABELS[vehicle.status]}
-              backgroundColor={statusStyle.bg}
-              textColor={statusStyle.text}
-              badgeStyle={styles.badge}
-              badgeTextStyle={styles.badgeText}
-            />
-            <Badge
-              label={getTypeLabel(vehicle.type)}
-              backgroundColor={typeStyle.bg}
-              textColor={typeStyle.text}
-              badgeStyle={styles.badge}
-              badgeTextStyle={styles.badgeText}
-            />
+          <View style={styles.heroCard}>
+            <Text style={styles.heroModel}>{vehicle.model}</Text>
+            <Text style={styles.heroVin}>VIN · {vehicle.vin}</Text>
+            <Text style={styles.heroMeta}>
+              Registered {formatVehicleDate(vehicle.createdAt)}
+              {vehicle.updatedAt ? ` · Updated ${formatVehicleDate(vehicle.updatedAt)}` : ''}
+            </Text>
+            <View style={styles.badges}>
+              <Badge
+                label={STATUS_LABELS[vehicle.status]}
+                backgroundColor={statusStyle.bg}
+                textColor={statusStyle.text}
+                badgeStyle={styles.badge}
+                badgeTextStyle={styles.badgeText}
+              />
+              <Badge
+                label={getTypeLabel(vehicle.type)}
+                backgroundColor={typeStyle.bg}
+                textColor={typeStyle.text}
+                badgeStyle={styles.badge}
+                badgeTextStyle={styles.badgeText}
+              />
+            </View>
           </View>
-
-          {isAdmin ? (
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-              onPress={handleAdminEdit}>
-              <Ionicons name="create-outline" size={20} color={colors.accent.primary} />
-              <Text style={styles.actionBtnText}>Edit record (admin)</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-              onPress={handleAppendUpdate}>
-              <Ionicons name="add-circle-outline" size={20} color={colors.accent.primary} />
-              <Text style={styles.actionBtnText}>Add photos & comments</Text>
-            </Pressable>
-          )}
 
           <View style={styles.card}>
             {isAdmin && vehicle.createdByEmail ? (
@@ -362,13 +399,6 @@ export default function VehicleDetailScreen() {
                 valueStyle={styles.rowValue}
               />
             ) : null}
-            <DetailRow
-              label="VIN"
-              value={vehicle.vin}
-              rowStyle={styles.row}
-              labelStyle={styles.rowLabel}
-              valueStyle={styles.rowValue}
-            />
             <DetailRow
               label="Model"
               value={vehicle.model}
@@ -397,22 +427,6 @@ export default function VehicleDetailScreen() {
               labelStyle={styles.rowLabel}
               valueStyle={styles.rowValue}
             />
-            <DetailRow
-              label="Registered"
-              value={formatVehicleDate(vehicle.createdAt)}
-              rowStyle={styles.row}
-              labelStyle={styles.rowLabel}
-              valueStyle={styles.rowValue}
-            />
-            {vehicle.updatedAt ? (
-              <DetailRow
-                label="Last updated"
-                value={formatVehicleDate(vehicle.updatedAt)}
-                rowStyle={styles.row}
-                labelStyle={styles.rowLabel}
-                valueStyle={styles.rowValue}
-              />
-            ) : null}
           </View>
 
           <View style={styles.card}>
@@ -444,23 +458,46 @@ export default function VehicleDetailScreen() {
               <Text style={styles.noPhotos}>No photos attached to this record.</Text>
             )}
           </View>
-
-          {isAdmin ? (
-            <Pressable
-              style={({ pressed }) => [styles.pdfBtnOutline, pressed && styles.pdfBtnOutlinePressed]}
-              onPress={handleExportPdf}
-              disabled={isPdfLoading}>
-              {isPdfLoading ? (
-                <ActivityIndicator color={colors.accent.primary} />
-              ) : (
-                <>
-                  <Ionicons name="document-outline" size={22} color={colors.accent.primary} />
-                  <Text style={styles.pdfBtnOutlineText}>Export PDF report</Text>
-                </>
-              )}
-            </Pressable>
-          ) : null}
         </ScrollView>
+
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {isAdmin ? (
+            <>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.footerBtnPrimary,
+                  pressed && styles.footerBtnPrimaryPressed,
+                ]}
+                onPress={handleAdminEdit}>
+                <Ionicons name="create-outline" size={20} color={colors.text.onAccent} />
+                <Text style={styles.footerBtnPrimaryText}>Edit record</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.footerBtnOutline,
+                  pressed && styles.footerBtnOutlinePressed,
+                ]}
+                onPress={handleExportPdf}
+                disabled={isPdfLoading}>
+                {isPdfLoading ? (
+                  <ActivityIndicator color={colors.accent.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="document-outline" size={22} color={colors.accent.primary} />
+                    <Text style={styles.footerBtnOutlineText}>Export PDF report</Text>
+                  </>
+                )}
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.footerBtn, pressed && styles.footerBtnPressed]}
+              onPress={handleAppendUpdate}>
+              <Ionicons name="add-circle-outline" size={20} color={colors.accent.primary} />
+              <Text style={styles.footerBtnText}>Add photos & comments</Text>
+            </Pressable>
+          )}
+        </View>
       </SafeAreaView>
     </>
   );
