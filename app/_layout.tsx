@@ -10,17 +10,35 @@ import {
   Sarabun_600SemiBold,
 } from '@expo-google-fonts/sarabun';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { colors } from '@/theme/colors';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { RootNavigator, ThemeLoadingScreen } from '@/components/RootNavigator';
 import { AuthProvider } from '@/context/AuthContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { VehicleCatalogProvider } from '@/context/VehicleCatalogContext';
 import { VehiclesProvider } from '@/context/VehiclesContext';
+import { colors } from '@/theme/colors';
+
+function FontLoadingGate({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { isReady } = useTheme();
+
+  if (!fontsLoaded || !isReady) {
+    return <ThemeLoadingScreen />;
+  }
+
+  return (
+    <AuthProvider>
+      <VehicleCatalogProvider>
+        <VehiclesProvider>
+          <RootNavigator />
+        </VehiclesProvider>
+      </VehicleCatalogProvider>
+    </AuthProvider>
+  );
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignore if splash is no longer available (hot reload).
@@ -57,24 +75,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <VehicleCatalogProvider>
-        <VehiclesProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background.primary },
-            }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="scanner" options={{ presentation: 'card' }} />
-            <Stack.Screen name="vehicle/[id]" options={{ presentation: 'card' }} />
-          </Stack>
-          <StatusBar style="light" />
-        </VehiclesProvider>
-        </VehicleCatalogProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <FontLoadingGate fontsLoaded={fontsLoaded} />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

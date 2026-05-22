@@ -3,7 +3,9 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
@@ -15,8 +17,70 @@ const TAB_META: Record<string, { label: string; icon: TabIconName; iconFocused: 
   account: { label: 'Account', icon: 'person-outline', iconFocused: 'person' },
 };
 
+function createTabBarStyles(colors: AppColors) {
+  return StyleSheet.create({
+    wrapper: {
+      backgroundColor: colors.background.primary,
+      borderTopWidth: 1,
+      borderTopColor: colors.border.default,
+      paddingTop: 8,
+      paddingHorizontal: 12,
+    },
+    bar: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface.elevated,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 6,
+      gap: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 12,
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
+    },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 6,
+      borderRadius: 14,
+      gap: 4,
+    },
+    tabFocused: {
+      backgroundColor: 'rgba(226, 31, 40, 0.1)',
+    },
+    tabPressed: {
+      opacity: 0.85,
+    },
+    iconWrap: {
+      width: 36,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
+    },
+    iconWrapFocused: {},
+    label: {
+      fontFamily: fonts.body,
+      fontSize: 11,
+      fontWeight: '500',
+      color: colors.text.secondary,
+    },
+    labelFocused: {
+      fontFamily: fonts.bodyMedium,
+      fontWeight: '600',
+      color: colors.accent.primary,
+    },
+  });
+}
+
 export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(createTabBarStyles);
+  const { colors } = useTheme();
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -70,58 +134,3 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.default,
-    paddingTop: 8,
-    paddingHorizontal: 12,
-  },
-  bar: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    borderRadius: 14,
-    gap: 4,
-  },
-  tabFocused: {
-    backgroundColor: 'rgba(226, 31, 40, 0.1)',
-  },
-  tabPressed: {
-    opacity: 0.85,
-  },
-  iconWrap: {
-    width: 36,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-  },
-  iconWrapFocused: {},
-  label: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.text.secondary,
-  },
-  labelFocused: {
-    fontFamily: fonts.bodyMedium,
-    fontWeight: '600',
-    color: colors.accent.primary,
-  },
-});

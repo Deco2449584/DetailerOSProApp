@@ -19,24 +19,134 @@ import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
 import { useVehicles } from '@/context/VehiclesContext';
 import type { Vehicle, VehicleType } from '@/types';
+import { useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { brand } from '@/theme/brand';
-import { colors } from '@/theme/colors';
+import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { getRoleLabel } from '@/services/userRepository';
 import { filterVehiclesBySearch } from '@/utils/filterVehicles';
 
-const TYPE_ACCENTS: Record<string, string> = {
-  nuevo: colors.accent.primary,
-  usado: colors.semantic.info,
-  redetailing: colors.semantic.warning,
-};
+function typeAccents(colors: AppColors): Record<string, string> {
+  return {
+    nuevo: colors.accent.primary,
+    usado: colors.semantic.info,
+    redetailing: colors.semantic.warning,
+  };
+}
 
 function countByType(vehicles: Vehicle[], type: VehicleType): number {
   return vehicles.filter((v) => v.type === type).length;
 }
 
+function createIndexStyles(colors: AppColors) {
+  return StyleSheet.create({
+    loading: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background.primary,
+    },
+    safe: {
+      flex: 1,
+      backgroundColor: colors.background.primary,
+    },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+    },
+    brandRow: {
+      alignItems: 'flex-start',
+      marginTop: 4,
+      marginBottom: 16,
+    },
+    headerLogo: {
+      alignItems: 'flex-start',
+    },
+    header: {
+      marginBottom: 24,
+    },
+    headerText: {
+      gap: 4,
+    },
+    greeting: {
+      fontFamily: fonts.heading,
+      fontSize: 24,
+      color: colors.text.primary,
+    },
+    headerSubtitle: {
+      fontFamily: fonts.body,
+      fontSize: 14,
+      color: colors.text.secondary,
+    },
+    adminBadge: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 12,
+      color: colors.text.mutedOnDark,
+      marginTop: 4,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 20,
+    },
+    errorBanner: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.semantic.error,
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      padding: 12,
+      borderRadius: 10,
+      marginBottom: 16,
+      lineHeight: 18,
+    },
+    sectionTitle: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 18,
+      color: colors.text.primary,
+      marginBottom: 4,
+    },
+    sectionHint: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: colors.text.secondary,
+      marginBottom: 12,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 24,
+      gap: 12,
+    },
+    emptyTitle: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 18,
+      color: colors.text.primary,
+      textAlign: 'center',
+    },
+    emptyHint: {
+      fontFamily: fonts.body,
+      fontSize: 14,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    footerLicense: {
+      fontFamily: fonts.body,
+      fontSize: 11,
+      color: colors.text.secondary,
+      textAlign: 'center',
+      marginTop: 20,
+      lineHeight: 16,
+    },
+  });
+}
+
 export default function RecordsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createIndexStyles);
+  const accents = useMemo(() => typeAccents(colors), [colors]);
   const { user, isAdmin, role, isLoading: authLoading } = useAuth();
   const { vehicles, isLoading: vehiclesLoading, isRefreshing, error: vehiclesError, refreshRecords } =
     useVehicles();
@@ -114,19 +224,19 @@ export default function RecordsScreen() {
               <StatCard
                 title="New"
                 value={counts.nuevo}
-                accentColor={TYPE_ACCENTS.nuevo}
+                accentColor={accents.nuevo}
                 icon="sparkles-outline"
               />
               <StatCard
                 title="Used"
                 value={counts.usado}
-                accentColor={TYPE_ACCENTS.usado}
+                accentColor={accents.usado}
                 icon="car-outline"
               />
               <StatCard
                 title="Redetailing"
                 value={counts.redetailing}
-                accentColor={TYPE_ACCENTS.redetailing}
+                accentColor={accents.redetailing}
                 icon="color-wand-outline"
               />
             </View>
@@ -171,104 +281,3 @@ export default function RecordsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background.primary,
-  },
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  brandRow: {
-    alignItems: 'flex-start',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  headerLogo: {
-    alignItems: 'flex-start',
-  },
-  header: {
-    marginBottom: 24,
-  },
-  headerText: {
-    gap: 4,
-  },
-  greeting: {
-    fontFamily: fonts.heading,
-    fontSize: 24,
-    color: colors.text.primary,
-  },
-  headerSubtitle: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  adminBadge: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.text.mutedOnDark,
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  errorBanner: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.semantic.error,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  sectionTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 18,
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
-  sectionHint: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.text.secondary,
-    marginBottom: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 18,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  emptyHint: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  footerLicense: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: 20,
-    lineHeight: 16,
-  },
-});

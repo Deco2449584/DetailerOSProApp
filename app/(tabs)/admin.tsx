@@ -17,8 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
+import { useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { brand } from '@/theme/brand';
-import { colors } from '@/theme/colors';
+import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { shareVehiclesAsCsv, shareVehiclesAsExcel } from '@/utils/exportVehicles';
 import { filterVehiclesByDateRange, parseDateInput } from '@/utils/filterVehicles';
@@ -40,7 +42,176 @@ function startOfMonth(): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
+function createAdminStyles(colors: AppColors) {
+  return StyleSheet.create({
+    loading: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background.primary,
+    },
+    safe: {
+      flex: 1,
+      backgroundColor: colors.background.primary,
+    },
+    content: {
+      padding: 20,
+      paddingBottom: 32,
+      gap: 16,
+    },
+    hero: {
+      gap: 10,
+    },
+    iconCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: 'rgba(226, 31, 40, 0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      fontFamily: fonts.heading,
+      fontSize: 26,
+      color: colors.text.primary,
+    },
+    subtitle: {
+      fontFamily: fonts.body,
+      fontSize: 14,
+      color: colors.text.secondary,
+      lineHeight: 20,
+    },
+    statsCard: {
+      backgroundColor: colors.surface.elevated,
+      borderRadius: 14,
+      padding: 20,
+      alignItems: 'center',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
+    },
+    statsIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(226, 31, 40, 0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statsValue: {
+      fontFamily: fonts.heading,
+      fontSize: 36,
+      color: colors.accent.primary,
+    },
+    statsLabel: {
+      fontFamily: fonts.body,
+      fontSize: 14,
+      color: colors.text.onSurfaceMuted,
+      textAlign: 'center',
+    },
+    sectionTitle: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 16,
+      color: colors.text.primary,
+      marginTop: 4,
+    },
+    presetRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    presetChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+    },
+    presetChipActive: {
+      borderColor: colors.accent.primary,
+      backgroundColor: 'rgba(226, 31, 40, 0.12)',
+    },
+    presetChipText: {
+      fontSize: 13,
+      color: colors.text.secondary,
+      fontWeight: '500',
+    },
+    presetChipTextActive: {
+      color: colors.accent.primary,
+      fontWeight: '700',
+    },
+    dateInputs: {
+      gap: 10,
+    },
+    dateField: {
+      gap: 4,
+    },
+    dateLabel: {
+      fontSize: 12,
+      color: colors.text.secondary,
+      fontWeight: '600',
+    },
+    dateInput: {
+      backgroundColor: colors.surface.elevated,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: colors.text.onSurface,
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: colors.accent.primary,
+      borderRadius: 14,
+      padding: 16,
+    },
+    actionBtnSecondary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: colors.surface.elevated,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border.default,
+    },
+    actionBtnPressed: {
+      opacity: 0.88,
+    },
+    actionText: {
+      flex: 1,
+      gap: 2,
+    },
+    actionTitle: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 16,
+      color: colors.text.onAccent,
+    },
+    actionTitleDark: {
+      fontFamily: fonts.headingSemiBold,
+      fontSize: 16,
+      color: colors.text.onSurface,
+    },
+    actionHint: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.85)',
+    },
+    actionHintDark: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.text.onSurfaceMuted,
+    },
+  });
+}
+
 export default function AdminScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createAdminStyles);
   const { isAdmin, isLoading: authLoading } = useAuth();
   const { catalog } = useVehicleCatalog();
   const { vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -205,165 +376,3 @@ export default function AdminScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background.primary,
-  },
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  hero: {
-    gap: 10,
-  },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: 'rgba(226, 31, 40, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: fonts.heading,
-    fontSize: 26,
-    color: colors.text.primary,
-  },
-  subtitle: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
-  statsCard: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 14,
-    padding: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  statsIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(226, 31, 40, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsValue: {
-    fontFamily: fonts.heading,
-    fontSize: 36,
-    color: colors.accent.primary,
-  },
-  statsLabel: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.text.onSurfaceMuted,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 16,
-    color: colors.text.primary,
-    marginTop: 4,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  presetChipActive: {
-    borderColor: colors.accent.primary,
-    backgroundColor: 'rgba(226, 31, 40, 0.12)',
-  },
-  presetChipText: {
-    fontSize: 13,
-    color: colors.text.secondary,
-    fontWeight: '500',
-  },
-  presetChipTextActive: {
-    color: colors.accent.primary,
-    fontWeight: '700',
-  },
-  dateInputs: {
-    gap: 10,
-  },
-  dateField: {
-    gap: 4,
-  },
-  dateLabel: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    fontWeight: '600',
-  },
-  dateInput: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border.onSurface,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: colors.text.onSurface,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.accent.primary,
-    borderRadius: 14,
-    padding: 16,
-  },
-  actionBtnSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  actionBtnPressed: {
-    opacity: 0.88,
-  },
-  actionText: {
-    flex: 1,
-    gap: 2,
-  },
-  actionTitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 16,
-    color: colors.text.onAccent,
-  },
-  actionTitleDark: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 16,
-    color: colors.text.onSurface,
-  },
-  actionHint: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-  },
-  actionHintDark: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.text.onSurfaceMuted,
-  },
-});
