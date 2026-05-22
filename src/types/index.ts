@@ -51,3 +51,9 @@ export type NewVehicleInput = {
 };
 
 export type UpdateVehicleInput = Omit<NewVehicleInput, 'vin'>;
+
+/** Append-only update: new comments and/or photos (scan duplicate flow). */
+export type AppendVehicleInput = {
+  additionalComments: string;
+  imagesUrls: string[];
+};

@@ -2,6 +2,8 @@ import {
   Timestamp,
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   query,
   serverTimestamp,
@@ -13,7 +15,14 @@ import {
 
 import { db } from '@/services/firebaseConfig';
 import { uploadVehicleImages } from '@/services/vehicleStorage';
-import type { NewVehicleInput, UpdateVehicleInput, Vehicle, VehicleStatus } from '@/types';
+import type {
+  AppendVehicleInput,
+  NewVehicleInput,
+  UpdateVehicleInput,
+  Vehicle,
+  VehicleStatus,
+} from '@/types';
+import { mergeComments } from '@/utils/mergeComments';
 import { normalizeVin } from '@/utils/vin';
 
 const VEHICLES_COLLECTION = 'vehicles';
@@ -80,6 +89,29 @@ function mapDocumentToVehicle(id: string, data: VehicleDocument): Vehicle {
 export function findVehicleByVin(vehicles: Vehicle[], vin: string): Vehicle | null {
   const key = normalizeVin(vin);
   return vehicles.find((vehicle) => normalizeVin(vehicle.vin) === key) ?? null;
+}
+
+/** Firestore lookup (respects security rules: own records, or any if admin). */
+export async function fetchVehicleByVin(vin: string): Promise<Vehicle | null> {
+  if (!db) {
+    return null;
+  }
+
+  const normalized = normalizeVin(vin);
+  const snapshot = await getDocs(
+    query(
+      collection(db, VEHICLES_COLLECTION),
+      where('vin', '==', normalized),
+      limit(1),
+    ),
+  );
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const document = snapshot.docs[0];
+  return mapDocumentToVehicle(document.id, document.data() as VehicleDocument);
 }
 
 export function subscribeToAllVehicles(
@@ -213,4 +245,38 @@ export async function updateVehicle(
   });
 
   return { imageUrls, updatedAtIso };
+}
+
+export async function appendToVehicle(
+  userId: string,
+  vehicleId: string,
+  input: AppendVehicleInput,
+  existingComments: string,
+): Promise<{ imageUrls: string[]; comments: string; updatedAtIso: string }> {
+  if (!db) {
+    throw new Error('Firestore is not configured.');
+  }
+
+  const localUris = input.imagesUrls.filter(
+    (uri) => !uri.startsWith('http://') && !uri.startsWith('https://'),
+  );
+  const keptRemoteUrls = input.imagesUrls.filter(
+    (uri) => uri.startsWith('http://') || uri.startsWith('https://'),
+  );
+
+  const uploadedUrls =
+    localUris.length > 0 ? await uploadVehicleImages(userId, vehicleId, localUris) : [];
+
+  const imageUrls = [...keptRemoteUrls, ...uploadedUrls];
+  const comments = mergeComments(existingComments, input.additionalComments);
+  const updatedAtIso = new Date().toISOString();
+
+  await updateDoc(doc(db, VEHICLES_COLLECTION, vehicleId), {
+    comments,
+    imagesUrls: imageUrls,
+    updatedAt: serverTimestamp(),
+    updatedAtIso,
+  });
+
+  return { imageUrls, comments, updatedAtIso };
 }

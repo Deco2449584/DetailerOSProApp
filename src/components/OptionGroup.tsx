@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { AppColors } from '@/theme/palettes';
 
 type OptionGroupProps<T extends string> = {
   label: string;
@@ -10,6 +12,45 @@ type OptionGroupProps<T extends string> = {
   getLabel?: (option: T) => string;
 };
 
+function createStyles(colors: AppColors, isDark: boolean) {
+  return StyleSheet.create({
+    group: {
+      gap: 8,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.onSurface,
+    },
+    options: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
+      backgroundColor: isDark ? colors.surface.muted : colors.surface.default,
+    },
+    chipSelected: {
+      borderColor: colors.accent.primary,
+      backgroundColor: isDark ? 'rgba(226, 31, 40, 0.2)' : '#FDE8EA',
+    },
+    chipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text.onSurfaceMuted,
+    },
+    chipTextSelected: {
+      color: colors.accent.primary,
+      fontWeight: '700',
+    },
+  });
+}
+
 export function OptionGroup<T extends string>({
   label,
   options,
@@ -17,6 +58,9 @@ export function OptionGroup<T extends string>({
   onChange,
   getLabel = (option) => option,
 }: OptionGroupProps<T>) {
+  const { isDark } = useTheme();
+  const styles = useThemedStyles((colors) => createStyles(colors, isDark));
+
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>
@@ -38,40 +82,3 @@ export function OptionGroup<T extends string>({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  group: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.onSurface,
-  },
-  options: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border.onSurface,
-    backgroundColor: colors.surface.default,
-  },
-  chipSelected: {
-    borderColor: colors.accent.primary,
-    backgroundColor: '#FDE8EA',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.text.onSurfaceMuted,
-  },
-  chipTextSelected: {
-    color: colors.accent.primaryPressed,
-    fontWeight: '700',
-  },
-});

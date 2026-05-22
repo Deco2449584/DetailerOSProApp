@@ -12,14 +12,16 @@ import { useAuth } from '@/context/AuthContext';
 import { isFirebaseConfigured } from '@/services/firebaseConfig';
 import {
   createVehicle,
+  fetchVehicleByVin,
   findVehicleByVin,
   subscribeToAllVehicles,
   subscribeToUserVehicles,
+  appendToVehicle,
   updateVehicle,
 } from '@/services/vehicleRepository';
-import type { NewVehicleInput, UpdateVehicleInput, Vehicle } from '@/types';
+import type { AppendVehicleInput, NewVehicleInput, UpdateVehicleInput, Vehicle } from '@/types';
 
-export type { NewVehicleInput, UpdateVehicleInput };
+export type { AppendVehicleInput, NewVehicleInput, UpdateVehicleInput };
 
 type VehiclesContextValue = {
   vehicles: Vehicle[];
@@ -27,9 +29,11 @@ type VehiclesContextValue = {
   isRefreshing: boolean;
   error: string | null;
   findByVin: (vin: string) => Vehicle | null;
+  lookupVehicleByVin: (vin: string) => Promise<Vehicle | null>;
   refreshRecords: () => Promise<void>;
   addVehicle: (input: NewVehicleInput) => Promise<Vehicle>;
   updateVehicleById: (vehicleId: string, input: UpdateVehicleInput) => Promise<Vehicle>;
+  appendVehicleById: (vehicleId: string, input: AppendVehicleInput) => Promise<Vehicle>;
 };
 
 const VehiclesContext = createContext<VehiclesContextValue | undefined>(undefined);
@@ -85,6 +89,21 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 
   const findByVin = useCallback(
     (vin: string) => findVehicleByVin(vehicles, vin),
+    [vehicles],
+  );
+
+  const lookupVehicleByVin = useCallback(
+    async (vin: string): Promise<Vehicle | null> => {
+      const local = findVehicleByVin(vehicles, vin);
+      if (local) {
+        return local;
+      }
+      try {
+        return await fetchVehicleByVin(vin);
+      } catch {
+        return null;
+      }
+    },
     [vehicles],
   );
 
@@ -149,6 +168,44 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
     [user, vehicles],
   );
 
+  const appendVehicleById = useCallback(
+    async (vehicleId: string, input: AppendVehicleInput): Promise<Vehicle> => {
+      if (!user) {
+        throw new Error('You must be signed in to update a record.');
+      }
+
+      const existing = vehicles.find((vehicle) => vehicle.id === vehicleId);
+      if (!existing) {
+        throw new Error('Vehicle record not found.');
+      }
+
+      const { imageUrls, comments, updatedAtIso } = await appendToVehicle(
+        user.uid,
+        vehicleId,
+        input,
+        existing.comments,
+      );
+
+      const updated: Vehicle = {
+        ...existing,
+        comments,
+        imagesUrls: imageUrls,
+        updatedAt: updatedAtIso,
+      };
+
+      setVehicles((prev) =>
+        prev
+          .map((vehicle) => (vehicle.id === vehicleId ? updated : vehicle))
+          .sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          ),
+      );
+
+      return updated;
+    },
+    [user, vehicles],
+  );
+
   const value = useMemo(
     () => ({
       vehicles,
@@ -156,11 +213,24 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
       isRefreshing,
       error,
       findByVin,
+      lookupVehicleByVin,
       refreshRecords,
       addVehicle,
       updateVehicleById,
+      appendVehicleById,
     }),
-    [vehicles, isLoading, isRefreshing, error, findByVin, refreshRecords, addVehicle, updateVehicleById],
+    [
+      vehicles,
+      isLoading,
+      isRefreshing,
+      error,
+      findByVin,
+      lookupVehicleByVin,
+      refreshRecords,
+      addVehicle,
+      updateVehicleById,
+      appendVehicleById,
+    ],
   );
 
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;

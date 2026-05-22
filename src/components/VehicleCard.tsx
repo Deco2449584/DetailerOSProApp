@@ -17,7 +17,7 @@ type VehicleCardProps = {
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
     card: {
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 12,
       padding: 14,
       marginBottom: 10,
@@ -37,8 +37,15 @@ function createStyles(colors: AppColors) {
     topRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 8,
+      gap: 12,
+    },
+    carIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: 'rgba(226, 31, 40, 0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     titleBlock: {
       flex: 1,
@@ -60,10 +67,14 @@ function createStyles(colors: AppColors) {
       color: colors.text.onSurfaceMuted,
       marginTop: 2,
     },
+    chevron: {
+      marginTop: 10,
+    },
     badges: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
+      paddingLeft: 56,
     },
     badge: {
       paddingHorizontal: 8,
@@ -100,7 +111,7 @@ function Badge({
 export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
   const { getTypeLabel } = useVehicleCatalog();
   const styles = useThemedStyles(createStyles);
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const statusStyle = STATUS_COLORS[vehicle.status];
   const typeStyle = getTypeColor(vehicle.type);
 
@@ -110,6 +121,9 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
       onPress={onPress}
       disabled={!onPress}>
       <View style={styles.topRow}>
+        <View style={styles.carIconWrap}>
+          <Ionicons name="car-sport" size={22} color={colors.accent.primary} />
+        </View>
         <View style={styles.titleBlock}>
           <Text style={styles.model} numberOfLines={1}>
             {vehicle.model}
@@ -118,7 +132,12 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
           <Text style={styles.date}>{formatVehicleDate(vehicle.createdAt)}</Text>
         </View>
         {onPress ? (
-          <Ionicons name="chevron-forward" size={20} color={colors.text.onSurfaceMuted} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.text.onSurfaceMuted}
+            style={styles.chevron}
+          />
         ) : null}
       </View>
       <View style={styles.badges}>
@@ -139,8 +158,8 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
         {vehicle.imagesUrls.length > 0 ? (
           <Badge
             label={`${vehicle.imagesUrls.length} photo${vehicle.imagesUrls.length === 1 ? '' : 's'}`}
-            backgroundColor="#E5E7EB"
-            textColor="#374151"
+            backgroundColor={isDark ? colors.surface.muted : '#E5E7EB'}
+            textColor={isDark ? colors.text.onSurfaceMuted : '#374151'}
             badgeStyle={styles.badge}
             badgeTextStyle={styles.badgeText}
           />
@@ -149,4 +168,3 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
     </Pressable>
   );
 }
-

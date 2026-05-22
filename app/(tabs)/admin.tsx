@@ -82,7 +82,7 @@ function createAdminStyles(colors: AppColors) {
       lineHeight: 20,
     },
     statsCard: {
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 14,
       padding: 20,
       alignItems: 'center',
@@ -152,7 +152,7 @@ function createAdminStyles(colors: AppColors) {
       fontWeight: '600',
     },
     dateInput: {
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: colors.border.onSurface,
@@ -173,7 +173,7 @@ function createAdminStyles(colors: AppColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 14,
       padding: 16,
       borderWidth: 1,

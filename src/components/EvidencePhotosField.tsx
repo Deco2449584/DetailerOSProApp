@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { AppColors } from '@/theme/palettes';
 
 type EvidencePhotosFieldProps = {
   photos: string[];
@@ -39,7 +40,95 @@ async function ensureLibraryPermission(): Promise<boolean> {
   return true;
 }
 
+const THUMB_SIZE = 88;
+
+function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    container: {
+      gap: 8,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.onSurface,
+    },
+    hint: {
+      fontSize: 12,
+      color: colors.text.onSurfaceMuted,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    actionButton: {
+      flex: 1,
+      backgroundColor: colors.accent.primary,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    actionButtonSecondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.border.onSurface,
+    },
+    actionButtonPressed: {
+      opacity: 0.75,
+    },
+    actionButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.onAccent,
+    },
+    actionButtonTextSecondary: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text.onSurface,
+    },
+    thumbnails: {
+      gap: 10,
+      paddingVertical: 4,
+    },
+    thumbnailWrap: {
+      width: THUMB_SIZE,
+      height: THUMB_SIZE,
+      borderRadius: 10,
+      overflow: 'hidden',
+      position: 'relative',
+      backgroundColor: colors.surface.muted,
+    },
+    thumbnail: {
+      width: THUMB_SIZE,
+      height: THUMB_SIZE,
+    },
+    removeBtn: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: 'rgba(0,0,0,0.65)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    removeBtnText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+      lineHeight: 18,
+    },
+    empty: {
+      fontSize: 13,
+      color: colors.text.onSurfaceMuted,
+      fontStyle: 'italic',
+    },
+  });
+}
+
 export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldProps) {
+  const styles = useThemedStyles(createStyles);
+
   const appendPhotos = (uris: string[]) => {
     if (uris.length === 0) return;
     onChange([...photos, ...uris]);
@@ -122,86 +211,3 @@ export function EvidencePhotosField({ photos, onChange }: EvidencePhotosFieldPro
     </View>
   );
 }
-
-const THUMB_SIZE = 88;
-
-const styles = StyleSheet.create({
-  container: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.onSurface,
-  },
-  hint: {
-    fontSize: 12,
-    color: colors.text.onSurfaceMuted,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: colors.accent.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  actionButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.border.onSurface,
-  },
-  actionButtonPressed: {
-    opacity: 0.75,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.onAccent,
-  },
-  actionButtonTextSecondary: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.onSurface,
-  },
-  thumbnails: {
-    gap: 10,
-    paddingVertical: 4,
-  },
-  thumbnailWrap: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 10,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  thumbnail: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-  },
-  removeBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  empty: {
-    fontSize: 13,
-    color: colors.text.onSurfaceMuted,
-    fontStyle: 'italic',
-  },
-});

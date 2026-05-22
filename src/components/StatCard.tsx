@@ -19,7 +19,7 @@ function createStyles(colors: AppColors) {
   return StyleSheet.create({
     card: {
       flex: 1,
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 14,
       paddingVertical: 14,
       paddingHorizontal: 10,

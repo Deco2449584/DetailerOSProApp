@@ -59,7 +59,7 @@ function createStyles(colors: AppColors) {
     },
     card: {
       width: '100%',
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderRadius: 14,
       padding: 16,
       gap: 12,
@@ -94,7 +94,7 @@ function createStyles(colors: AppColors) {
       gap: 12,
       padding: 14,
       borderRadius: 12,
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.surface.card,
       borderWidth: 1,
       borderColor: colors.border.onSurface,
     },

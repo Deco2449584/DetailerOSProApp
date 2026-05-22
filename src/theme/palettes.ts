@@ -7,16 +7,17 @@ export const darkPalette = {
     secondary: '#141414',
   },
   surface: {
-    default: '#F3F3F3',
-    elevated: '#FFFFFF',
-    muted: '#E8E8E8',
+    default: '#141414',
+    elevated: '#1C1C1E',
+    card: '#1C1C1E',
+    muted: '#2C2C2E',
   },
   text: {
     primary: '#FFFFFF',
     secondary: '#B8B8B8',
     mutedOnDark: '#A0A0A0',
-    onSurface: '#3D3D3D',
-    onSurfaceMuted: '#6B6B6B',
+    onSurface: '#F0F0F0',
+    onSurfaceMuted: '#9CA3AF',
     onAccent: '#FFFFFF',
   },
   accent: {
@@ -27,7 +28,7 @@ export const darkPalette = {
   },
   border: {
     default: '#333333',
-    onSurface: '#D1D5DB',
+    onSurface: '#3A3A3C',
     brand: '#000000',
   },
   semantic: {
@@ -46,7 +47,8 @@ export const lightPalette = {
   surface: {
     default: '#FFFFFF',
     elevated: '#FFFFFF',
-    muted: '#E8E8E8',
+    card: '#FFFFFF',
+    muted: '#F0F0F0',
   },
   text: {
     primary: '#111111',
