@@ -1,23 +1,23 @@
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type ReactNode,
 } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { isFirebaseConfigured } from '@/services/firebaseConfig';
 import {
-  createVehicle,
-  fetchVehicleByVin,
-  findVehicleByVin,
-  subscribeToAllVehicles,
-  subscribeToUserVehicles,
-  appendToVehicle,
-  updateVehicle,
+    appendToVehicle,
+    createVehicle,
+    fetchVehicleByVin,
+    findVehicleByVin,
+    subscribeToAllVehicles,
+    subscribeToUserVehicles,
+    updateVehicle,
 } from '@/services/vehicleRepository';
 import type { AppendVehicleInput, NewVehicleInput, UpdateVehicleInput, Vehicle } from '@/types';
 
@@ -179,16 +179,18 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
         throw new Error('Vehicle record not found.');
       }
 
-      const { imageUrls, comments, updatedAtIso } = await appendToVehicle(
+      const { imageUrls, comments, type, updatedAtIso } = await appendToVehicle(
         user.uid,
         vehicleId,
         input,
         existing.comments,
         existing.imagesUrls,
+        existing.type,
       );
 
       const updated: Vehicle = {
         ...existing,
+        type,
         comments,
         imagesUrls: imageUrls,
         updatedAt: updatedAtIso,

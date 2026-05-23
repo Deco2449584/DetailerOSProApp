@@ -2,21 +2,22 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'ex
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ColorPickerCarousel } from '@/components/ColorPickerCarousel';
 import { EvidencePhotosField } from '@/components/EvidencePhotosField';
+import { InfoModal } from '@/components/InfoModal';
 import { OptionGroup } from '@/components/OptionGroup';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -24,10 +25,10 @@ import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import type { Vehicle } from '@/types';
 import { brand } from '@/theme/brand';
 import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
+import type { Vehicle } from '@/types';
 import { normalizeVin } from '@/utils/vin';
 
 type FormMode = 'create' | 'admin-edit' | 'append';
@@ -60,6 +61,8 @@ export default function ScannerScreen() {
   const [existingComments, setExistingComments] = useState('');
   const [lockedPhotoUris, setLockedPhotoUris] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [vinModalVisible, setVinModalVisible] = useState(false);
+  const [vinModalModel, setVinModalModel] = useState('');
 
   const [model, setModel] = useState('');
   const [type, setType] = useState('');
@@ -113,7 +116,7 @@ export default function ScannerScreen() {
     setLockedPhotoUris([...vehicle.imagesUrls]);
     setScannedVin(vehicle.vin);
     setModel(vehicle.model);
-    setType(vehicle.type);
+    setType('');                        // blank = no type change
     setVehicleColor(vehicle.color);
     setComments('');
     setEvidencePhotos(vehicle.imagesUrls);
@@ -157,10 +160,8 @@ export default function ScannerScreen() {
         const existing = await lookupVehicleByVin(vin);
         if (existing) {
           loadVehicleForAppend(existing);
-          Alert.alert(
-            'VIN already registered',
-            `This vehicle (${existing.model}) is already registered. You can only add comments and photo evidence.`,
-          );
+          setVinModalModel(existing.model);
+          setVinModalVisible(true);
           return;
         }
 
@@ -213,6 +214,7 @@ export default function ScannerScreen() {
         await appendVehicleById(appendTargetId, {
           additionalComments: comments,
           imagesUrls: evidencePhotos,
+          newType: type || undefined,
         });
       } else if (effectiveMode === 'admin-edit' && editingVehicleId) {
         if (!isAdmin) {
@@ -226,10 +228,8 @@ export default function ScannerScreen() {
         if (duplicate) {
           setIsSaving(false);
           loadVehicleForAppend(duplicate);
-          Alert.alert(
-            'VIN already registered',
-            'This vehicle is already registered. You can only add comments and photo evidence.',
-          );
+          setVinModalModel(duplicate.model);
+          setVinModalVisible(true);
           return;
         }
 
@@ -245,10 +245,8 @@ export default function ScannerScreen() {
         const duplicate = await lookupVehicleByVin(scannedVin);
         if (duplicate) {
           loadVehicleForAppend(duplicate);
-          Alert.alert(
-            'VIN already registered',
-            'This vehicle is already registered. You can only add comments and photo evidence.',
-          );
+          setVinModalModel(duplicate.model);
+          setVinModalVisible(true);
         } else {
           Alert.alert('Duplicate VIN', 'This VIN is already registered.');
         }
@@ -352,7 +350,7 @@ export default function ScannerScreen() {
               showsVerticalScrollIndicator={false}>
             {effectiveMode === 'append' ? (
               <Text style={styles.formHint}>
-                Model, type and colour cannot be changed. Add new comments or photos below.
+                Add a new service type (optional), comments or photos below.
               </Text>
             ) : null}
 
@@ -371,8 +369,27 @@ export default function ScannerScreen() {
                 <View style={styles.readOnlyBlock}>
                   <Text style={styles.readOnlyLabel}>Model</Text>
                   <Text style={styles.readOnlyValue}>{model}</Text>
-                  <Text style={styles.readOnlyLabel}>Type</Text>
-                  <Text style={styles.readOnlyValue}>{getTypeLabel(type)}</Text>
+
+                  {/* Type history chain */}
+                  <Text style={styles.readOnlyLabel}>Service history</Text>
+                  <Text style={styles.typeChain}>
+                    {existingForVin?.type ?? (editingVehicleId
+                      ? vehicles.find(v => v.id === editingVehicleId)?.type
+                      : '') ?? ''}
+                    {type ? (
+                      <Text style={styles.typeChainNew}>{`  +  ${getTypeLabel(type)}`}</Text>
+                    ) : null}
+                  </Text>
+
+                  {/* New type selector */}
+                  <OptionGroup
+                    label="Add service type (optional)"
+                    options={['', ...catalog.types.map((item) => item.value)]}
+                    value={type}
+                    onChange={setType}
+                    getLabel={(option) => option === '' ? '— No change —' : getTypeLabel(option)}
+                  />
+
                   <Text style={styles.readOnlyLabel}>Colour</Text>
                   <Text style={styles.readOnlyValue}>{vehicleColor}</Text>
                   {existingComments.trim() ? (
@@ -473,6 +490,15 @@ export default function ScannerScreen() {
           </KeyboardAvoidingView>
         </>
       ) : null}
+
+      <InfoModal
+        visible={vinModalVisible}
+        icon="car-outline"
+        title="VIN already registered"
+        message={`${vinModalModel ? `${vinModalModel} is` : 'This vehicle is'} already in the system. You can add a new service type, comments or photos below.`}
+        confirmLabel="Continue"
+        onConfirm={() => setVinModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -607,6 +633,17 @@ function createScannerStyles(colors: AppColors) {
     fontSize: 14,
     color: colors.text.onSurfaceMuted,
     lineHeight: 20,
+  },
+  typeChain: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text.onSurface,
+    lineHeight: 22,
+  },
+  typeChainNew: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.accent.primary,
   },
   vinBox: {
     gap: 6,

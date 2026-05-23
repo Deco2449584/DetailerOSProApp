@@ -1,26 +1,26 @@
 import {
-  Timestamp,
-  collection,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-  type Unsubscribe,
+    Timestamp,
+    collection,
+    doc,
+    getDocs,
+    limit,
+    onSnapshot,
+    query,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+    where,
+    type Unsubscribe,
 } from 'firebase/firestore';
 
 import { db } from '@/services/firebaseConfig';
 import { uploadVehicleImages } from '@/services/vehicleStorage';
 import type {
-  AppendVehicleInput,
-  NewVehicleInput,
-  UpdateVehicleInput,
-  Vehicle,
-  VehicleStatus,
+    AppendVehicleInput,
+    NewVehicleInput,
+    UpdateVehicleInput,
+    Vehicle,
+    VehicleStatus,
 } from '@/types';
 import { mergeComments } from '@/utils/mergeComments';
 import { normalizeVin } from '@/utils/vin';
@@ -253,7 +253,8 @@ export async function appendToVehicle(
   input: AppendVehicleInput,
   existingComments: string,
   existingImageUrls: string[],
-): Promise<{ imageUrls: string[]; comments: string; updatedAtIso: string }> {
+  existingType: string,
+): Promise<{ imageUrls: string[]; comments: string; type: string; updatedAtIso: string }> {
   if (!db) {
     throw new Error('Firestore is not configured.');
   }
@@ -270,12 +271,21 @@ export async function appendToVehicle(
   const comments = mergeComments(existingComments, input.additionalComments);
   const updatedAtIso = new Date().toISOString();
 
-  await updateDoc(doc(db, VEHICLES_COLLECTION, vehicleId), {
+  // Build type history chain: "nuevo + redetailing + ..."
+  const type =
+    input.newType && input.newType !== existingType
+      ? `${existingType} + ${input.newType}`
+      : existingType;
+
+  const updatePayload: Record<string, unknown> = {
     comments,
     imagesUrls: imageUrls,
+    type,
     updatedAt: serverTimestamp(),
     updatedAtIso,
-  });
+  };
 
-  return { imageUrls, comments, updatedAtIso };
+  await updateDoc(doc(db, VEHICLES_COLLECTION, vehicleId), updatePayload);
+
+  return { imageUrls, comments, type, updatedAtIso };
 }
