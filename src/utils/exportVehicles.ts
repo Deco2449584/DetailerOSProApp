@@ -2,20 +2,17 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import type { Vehicle } from '@/types';
-import { formatVehicleDate } from '@/utils/formatDate';
-import { STATUS_LABELS } from '@/utils/vehicleLabels';
 import type { CatalogTypeOption } from '@/types/catalog';
+import { formatVehicleDate } from '@/utils/formatDate';
 
 function buildTypeLabelMap(types: CatalogTypeOption[]): Map<string, string> {
   return new Map(types.map((type) => [type.value, type.label]));
 }
 
 const CSV_HEADERS = [
-  'ID',
   'VIN',
   'Model',
   'Type',
-  'Status',
   'Colour',
   'Comments',
   'Photos',
@@ -30,11 +27,9 @@ function escapeCsvCell(value: string): string {
 
 function vehicleToRow(vehicle: Vehicle, typeLabels: Map<string, string>): string[] {
   return [
-    vehicle.id,
     vehicle.vin,
     vehicle.model,
     typeLabels.get(vehicle.type) ?? vehicle.type,
-    STATUS_LABELS[vehicle.status],
     vehicle.color,
     vehicle.comments,
     String(vehicle.imagesUrls.length),

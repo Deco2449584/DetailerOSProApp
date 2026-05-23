@@ -1,20 +1,20 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type TextStyle,
-  type ViewStyle,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    type TextStyle,
+    type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -26,8 +26,8 @@ import { brand } from '@/theme/brand';
 import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { formatVehicleDate } from '@/utils/formatDate';
+import { getTypeColor } from '@/utils/vehicleLabels';
 import { shareVehiclePdf } from '@/utils/vehiclePdf';
-import { getTypeColor, STATUS_COLORS, STATUS_LABELS } from '@/utils/vehicleLabels';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PHOTO_WIDTH = SCREEN_WIDTH - 40;
@@ -339,7 +339,6 @@ export default function VehicleDetailScreen() {
     );
   }
 
-  const statusStyle = STATUS_COLORS[vehicle.status];
   const typeStyle = getTypeColor(vehicle.type);
 
   return (
@@ -373,13 +372,6 @@ export default function VehicleDetailScreen() {
             </Text>
             <View style={styles.badges}>
               <Badge
-                label={STATUS_LABELS[vehicle.status]}
-                backgroundColor={statusStyle.bg}
-                textColor={statusStyle.text}
-                badgeStyle={styles.badge}
-                badgeTextStyle={styles.badgeText}
-              />
-              <Badge
                 label={getTypeLabel(vehicle.type)}
                 backgroundColor={typeStyle.bg}
                 textColor={typeStyle.text}
@@ -409,13 +401,6 @@ export default function VehicleDetailScreen() {
             <DetailRow
               label="Type"
               value={getTypeLabel(vehicle.type)}
-              rowStyle={styles.row}
-              labelStyle={styles.rowLabel}
-              valueStyle={styles.rowValue}
-            />
-            <DetailRow
-              label="Status"
-              value={STATUS_LABELS[vehicle.status]}
               rowStyle={styles.row}
               labelStyle={styles.rowLabel}
               valueStyle={styles.rowValue}

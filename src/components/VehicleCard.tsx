@@ -3,11 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
-import type { Vehicle } from '@/types';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { AppColors } from '@/theme/palettes';
+import type { Vehicle } from '@/types';
 import { formatVehicleDate } from '@/utils/formatDate';
-import { getTypeColor, STATUS_COLORS, STATUS_LABELS } from '@/utils/vehicleLabels';
+import { getTypeColor } from '@/utils/vehicleLabels';
 
 type VehicleCardProps = {
   vehicle: Vehicle;
@@ -112,7 +112,6 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
   const { getTypeLabel } = useVehicleCatalog();
   const styles = useThemedStyles(createStyles);
   const { colors, isDark } = useTheme();
-  const statusStyle = STATUS_COLORS[vehicle.status];
   const typeStyle = getTypeColor(vehicle.type);
 
   return (
@@ -141,13 +140,6 @@ export function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
         ) : null}
       </View>
       <View style={styles.badges}>
-        <Badge
-          label={STATUS_LABELS[vehicle.status]}
-          backgroundColor={statusStyle.bg}
-          textColor={statusStyle.text}
-          badgeStyle={styles.badge}
-          badgeTextStyle={styles.badgeText}
-        />
         <Badge
           label={getTypeLabel(vehicle.type)}
           backgroundColor={typeStyle.bg}
