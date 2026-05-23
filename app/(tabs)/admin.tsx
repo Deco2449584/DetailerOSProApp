@@ -1,46 +1,34 @@
 import { Redirect } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
+import { DateRangeFilters } from '@/components/DateRangeFilters';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
-import { useTheme } from '@/context/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { brand } from '@/theme/brand';
 import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { shareVehiclesAsCsv, shareVehiclesAsExcel } from '@/utils/exportVehicles';
-import { filterVehiclesByDateRange, parseDateInput } from '@/utils/filterVehicles';
-
-type DatePreset = 'all' | 'week' | 'month';
-
-function startOfWeek(): Date {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function startOfMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
-}
+import {
+    filterVehiclesByDateRange,
+    getDateRangeForPreset,
+    startOfMonth,
+    type DateFilterPreset,
+} from '@/utils/filterVehicles';
 
 function createAdminStyles(colors: AppColors) {
   return StyleSheet.create({
@@ -115,52 +103,6 @@ function createAdminStyles(colors: AppColors) {
       color: colors.text.primary,
       marginTop: 4,
     },
-    presetRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    presetChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border.default,
-    },
-    presetChipActive: {
-      borderColor: colors.accent.primary,
-      backgroundColor: 'rgba(226, 31, 40, 0.12)',
-    },
-    presetChipText: {
-      fontSize: 13,
-      color: colors.text.secondary,
-      fontWeight: '500',
-    },
-    presetChipTextActive: {
-      color: colors.accent.primary,
-      fontWeight: '700',
-    },
-    dateInputs: {
-      gap: 10,
-    },
-    dateField: {
-      gap: 4,
-    },
-    dateLabel: {
-      fontSize: 12,
-      color: colors.text.secondary,
-      fontWeight: '600',
-    },
-    dateInput: {
-      backgroundColor: colors.surface.card,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.border.onSurface,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 15,
-      color: colors.text.onSurface,
-    },
     actionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -215,32 +157,25 @@ export default function AdminScreen() {
   const { isAdmin, isLoading: authLoading } = useAuth();
   const { catalog } = useVehicleCatalog();
   const { vehicles, isLoading: vehiclesLoading } = useVehicles();
+
   const [isExporting, setIsExporting] = useState<'csv' | 'excel' | null>(null);
-  const [datePreset, setDatePreset] = useState<DatePreset>('all');
-  const [fromDateText, setFromDateText] = useState('');
-  const [toDateText, setToDateText] = useState('');
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>('week');
+  const [customFrom, setCustomFrom] = useState(() => startOfMonth());
+  const [customTo, setCustomTo] = useState(() => new Date());
 
   if (!authLoading && !isAdmin) {
     return <Redirect href="/(tabs)/" />;
   }
 
-  const exportVehicles = useMemo(() => {
-    let from: Date | null = null;
-    let to: Date | null = null;
+  const dateRange = useMemo(
+    () => getDateRangeForPreset(datePreset, customFrom, customTo),
+    [datePreset, customFrom, customTo],
+  );
 
-    if (datePreset === 'week') {
-      from = startOfWeek();
-      to = new Date();
-    } else if (datePreset === 'month') {
-      from = startOfMonth();
-      to = new Date();
-    } else if (datePreset === 'all') {
-      from = parseDateInput(fromDateText);
-      to = parseDateInput(toDateText);
-    }
-
-    return filterVehiclesByDateRange(vehicles, from, to);
-  }, [vehicles, datePreset, fromDateText, toDateText]);
+  const exportVehicles = useMemo(
+    () => filterVehiclesByDateRange(vehicles, dateRange.from, dateRange.to),
+    [vehicles, dateRange],
+  );
 
   const handleExport = async (format: 'csv' | 'excel') => {
     if (exportVehicles.length === 0) {
@@ -273,6 +208,7 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.iconCircle}>
             <Ionicons name="shield-checkmark" size={28} color={colors.accent.primary} />
@@ -283,6 +219,7 @@ export default function AdminScreen() {
           </Text>
         </View>
 
+        {/* Stats */}
         <View style={styles.statsCard}>
           <View style={styles.statsIconWrap}>
             <Ionicons name="server-outline" size={28} color={colors.accent.primary} />
@@ -293,49 +230,17 @@ export default function AdminScreen() {
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Date range</Text>
-        <View style={styles.presetRow}>
-          {(['all', 'week', 'month'] as DatePreset[]).map((preset) => (
-            <Pressable
-              key={preset}
-              style={[styles.presetChip, datePreset === preset && styles.presetChipActive]}
-              onPress={() => setDatePreset(preset)}>
-              <Text
-                style={[
-                  styles.presetChipText,
-                  datePreset === preset && styles.presetChipTextActive,
-                ]}>
-                {preset === 'all' ? 'Custom' : preset === 'week' ? 'This week' : 'This month'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {/* Date filter — same component as Search screen */}
+        <DateRangeFilters
+          preset={datePreset}
+          onPresetChange={setDatePreset}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
+        />
 
-        {datePreset === 'all' ? (
-          <View style={styles.dateInputs}>
-            <View style={styles.dateField}>
-              <Text style={styles.dateLabel}>From (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={fromDateText}
-                onChangeText={setFromDateText}
-                placeholder="2026-05-01"
-                placeholderTextColor={colors.text.onSurfaceMuted}
-              />
-            </View>
-            <View style={styles.dateField}>
-              <Text style={styles.dateLabel}>To (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={toDateText}
-                onChangeText={setToDateText}
-                placeholder="2026-05-31"
-                placeholderTextColor={colors.text.onSurfaceMuted}
-              />
-            </View>
-          </View>
-        ) : null}
-
+        {/* Export buttons */}
         <Text style={styles.sectionTitle}>Download reports</Text>
 
         <Pressable
@@ -375,4 +280,3 @@ export default function AdminScreen() {
     </SafeAreaView>
   );
 }
-
