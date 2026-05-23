@@ -12,18 +12,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import { FineShineLogo } from '@/components/FineShineLogo';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
-import { useVehicles } from '@/context/VehiclesContext';
-import type { Vehicle, VehicleType } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
+import { useVehicles } from '@/context/VehiclesContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { getRoleLabel } from '@/services/userRepository';
 import { brand } from '@/theme/brand';
 import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
-import { getRoleLabel } from '@/services/userRepository';
+import type { Vehicle, VehicleType } from '@/types';
 import { filterVehiclesToday, formatFilterDate, getTodayRange } from '@/utils/filterVehicles';
 
 function typeAccents(colors: AppColors): Record<string, string> {
@@ -198,9 +197,10 @@ export default function RecordsScreen() {
         }
         ListHeaderComponent={
           <>
-            <View style={styles.brandRow}>
+            {/* <View style={styles.brandRow}>
               <FineShineLogo width={140} style={styles.headerLogo} />
-            </View>
+            </View> */}
+            <View style={{ height: 16 }} />
 
             <View style={styles.header}>
               <View style={styles.headerText}>

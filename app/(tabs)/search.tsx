@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -8,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 import { DateRangeFilters } from '@/components/DateRangeFilters';
 import { RecordsSearchBar } from '@/components/RecordsSearchBar';
@@ -161,7 +161,9 @@ export default function SearchScreen() {
   }
 
   return (
+    
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <View style={{ height: 16 }} />
       <FlatList
         data={filteredVehicles}
         keyExtractor={(item) => item.id}
