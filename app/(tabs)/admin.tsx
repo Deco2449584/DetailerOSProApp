@@ -1,19 +1,20 @@
 import { Redirect } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
 import { DateRangeFilters } from '@/components/DateRangeFilters';
+import { UserManagementSection } from '@/components/UserManagementSection';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
@@ -24,10 +25,10 @@ import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { shareVehiclesAsCsv, shareVehiclesAsExcel } from '@/utils/exportVehicles';
 import {
-    filterVehiclesByDateRange,
-    getDateRangeForPreset,
-    startOfMonth,
-    type DateFilterPreset,
+  filterVehiclesByDateRange,
+  getDateRangeForPreset,
+  startOfMonth,
+  type DateFilterPreset,
 } from '@/utils/filterVehicles';
 
 function createAdminStyles(colors: AppColors) {
@@ -154,7 +155,7 @@ function createAdminStyles(colors: AppColors) {
 export default function AdminScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createAdminStyles);
-  const { isAdmin, isLoading: authLoading } = useAuth();
+  const { isAdmin, isLoading: authLoading, user } = useAuth();
   const { catalog } = useVehicleCatalog();
   const { vehicles, isLoading: vehiclesLoading } = useVehicles();
 
@@ -276,6 +277,9 @@ export default function AdminScreen() {
             <Ionicons name="download-outline" size={22} color={colors.accent.primary} />
           )}
         </Pressable>
+
+        {/* User management */}
+        {user ? <UserManagementSection currentUserUid={user.uid} /> : null}
       </ScrollView>
     </SafeAreaView>
   );

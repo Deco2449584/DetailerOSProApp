@@ -1,3 +1,5 @@
+import { FineShineLogo } from '@/components/FineShineLogo';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import {
@@ -9,8 +11,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { Ionicons } from '@expo/vector-icons';
 
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
@@ -197,9 +197,9 @@ export default function RecordsScreen() {
         }
         ListHeaderComponent={
           <>
-            {/* <View style={styles.brandRow}>
+             <View style={styles.brandRow}>
               <FineShineLogo width={140} style={styles.headerLogo} />
-            </View> */}
+            </View> 
             <View style={{ height: 16 }} />
 
             <View style={styles.header}>
