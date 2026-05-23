@@ -35,14 +35,11 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const RED       = '#E21F28';
 const RED_DIM   = 'rgba(226,31,40,0.14)';
 const RED_RANGE = 'rgba(226,31,40,0.08)';
-const CAL_BG    = '#0A0A0A';
-const CARD_BG   = '#111111';
-const BORDER    = '#2A2A2A';
+
+// ─── Styles (all surface/border/text colors come from the theme) ──────────────
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
@@ -76,8 +73,8 @@ function createStyles(colors: AppColors) {
       paddingVertical: 9,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: BORDER,
-      backgroundColor: CARD_BG,
+      borderColor: colors.border.onSurface,
+      backgroundColor: colors.surface.card,
     },
     chipActive: {
       borderColor: RED,
@@ -117,8 +114,8 @@ function createStyles(colors: AppColors) {
       paddingVertical: 11,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: BORDER,
-      backgroundColor: CARD_BG,
+      borderColor: colors.border.onSurface,
+      backgroundColor: colors.surface.card,
     },
     dateBtnActive: {
       borderColor: RED,
@@ -136,10 +133,10 @@ function createStyles(colors: AppColors) {
 
     // ── Calendar card ────────────────────────────────────────────────────────
     calendarCard: {
-      backgroundColor: CAL_BG,
+      backgroundColor: colors.surface.elevated,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: BORDER,
+      borderColor: colors.border.onSurface,
       overflow: 'hidden',
     },
     calHeader: {
@@ -149,22 +146,22 @@ function createStyles(colors: AppColors) {
       paddingHorizontal: 16,
       paddingVertical: 14,
       borderBottomWidth: 1,
-      borderBottomColor: BORDER,
+      borderBottomColor: colors.border.onSurface,
     },
     calNavBtn: {
       width: 36,
       height: 36,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: BORDER,
+      borderColor: colors.border.onSurface,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#161616',
+      backgroundColor: colors.surface.muted,
     },
     calMonthYear: {
       fontFamily: fonts.headingSemiBold,
       fontSize: 16,
-      color: '#FFFFFF',
+      color: colors.text.primary,
       letterSpacing: 0.2,
     },
     calDayRow: {
@@ -225,14 +222,14 @@ function createStyles(colors: AppColors) {
     calDayText: {
       fontSize: 14,
       fontWeight: '500',
-      color: '#CCCCCC',
+      color: colors.text.onSurface,
     },
     calDayTextSelected: {
       color: '#FFFFFF',
       fontWeight: '700',
     },
     calDayTextMuted: {
-      color: '#444444',
+      color: colors.text.onSurfaceMuted,
     },
     calDayTextToday: {
       color: RED,
@@ -242,8 +239,6 @@ function createStyles(colors: AppColors) {
       flex: 1,
       height: 40,
     },
-
-    // ── Picker label (which date is being picked) ────────────────────────────
     pickingLabel: {
       textAlign: 'center',
       fontSize: 12,
@@ -273,7 +268,7 @@ function startOfDayLocal(d: Date) {
 
 function buildCalendarGrid(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells: (Date | null)[] = [];
@@ -297,6 +292,7 @@ type MiniCalendarProps = {
 
 function MiniCalendar({ target, from, to, onSelect }: MiniCalendarProps) {
   const styles = useThemedStyles(createStyles);
+  const { colors } = useTheme();
   const initial = target === 'from' ? from : to;
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
@@ -317,46 +313,42 @@ function MiniCalendar({ target, from, to, onSelect }: MiniCalendarProps) {
 
   return (
     <View style={styles.calendarCard}>
-      {/* Picking indicator */}
       <Text style={styles.pickingLabel}>
         {target === 'from' ? '▸ Select start date' : '▸ Select end date'}
       </Text>
 
-      {/* Month / year navigation */}
       <View style={styles.calHeader}>
         <Pressable style={styles.calNavBtn} onPress={prevMonth}>
-          <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={18} color={colors.text.primary} />
         </Pressable>
         <Text style={styles.calMonthYear}>
           {MONTHS[viewMonth]} {viewYear}
         </Text>
         <Pressable style={styles.calNavBtn} onPress={nextMonth}>
-          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          <Ionicons name="chevron-forward" size={18} color={colors.text.primary} />
         </Pressable>
       </View>
 
-      {/* Day-of-week header */}
       <View style={styles.calDayRow}>
         {DAYS_SHORT.map((d) => (
           <Text key={d} style={styles.calDayName}>{d}</Text>
         ))}
       </View>
 
-      {/* Day grid */}
       <View style={styles.calGrid}>
         {weeks.map((week, wi) => (
           <View key={wi} style={styles.calWeekRow}>
             {week.map((day, di) => {
               if (!day) return <View key={di} style={styles.calDayEmpty} />;
 
-              const dayTs   = day.getTime();
-              const isFrom  = isSameDay(day, fromDay);
-              const isTo    = isSameDay(day, toDay);
+              const dayTs      = day.getTime();
+              const isFrom     = isSameDay(day, fromDay);
+              const isTo       = isSameDay(day, toDay);
               const isSelected = isFrom || isTo;
-              const inRange = dayTs > fromDay.getTime() && dayTs < toDay.getTime();
-              const isToday = isSameDay(day, today);
-              const isFuture = dayTs > today.getTime();
-              const singleDay = isSameDay(fromDay, toDay);
+              const inRange    = dayTs > fromDay.getTime() && dayTs < toDay.getTime();
+              const isToday    = isSameDay(day, today);
+              const isFuture   = dayTs > today.getTime();
+              const singleDay  = isSameDay(fromDay, toDay);
 
               const cellStyle = [
                 styles.calDay,
@@ -371,9 +363,9 @@ function MiniCalendar({ target, from, to, onSelect }: MiniCalendarProps) {
 
               const textStyle = [
                 styles.calDayText,
-                isFuture   && styles.calDayTextMuted,
+                isFuture    && styles.calDayTextMuted,
                 !isSelected && isToday && styles.calDayTextToday,
-                isSelected && styles.calDayTextSelected,
+                isSelected  && styles.calDayTextSelected,
               ];
 
               return (
@@ -411,7 +403,6 @@ export function DateRangeFilters({
     if (pickerTarget === 'from') {
       onCustomFromChange(date);
       if (date > customTo) onCustomToChange(date);
-      // Auto-advance to "to" picker
       setPickerTarget('to');
     } else if (pickerTarget === 'to') {
       onCustomToChange(date);
@@ -482,7 +473,7 @@ export function DateRangeFilters({
         </View>
       ) : null}
 
-      {/* Custom calendar — used on ALL platforms (no native picker) */}
+      {/* Calendar — all platforms */}
       {pickerTarget && preset === 'custom' ? (
         <MiniCalendar
           target={pickerTarget}
