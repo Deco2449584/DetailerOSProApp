@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { FineShineLogo } from '@/components/FineShineLogo';
-import { RecordsSearchBar } from '@/components/RecordsSearchBar';
 import { StatCard } from '@/components/StatCard';
 import { VehicleCard } from '@/components/VehicleCard';
 import { useAuth } from '@/context/AuthContext';
@@ -25,7 +24,7 @@ import { brand } from '@/theme/brand';
 import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
 import { getRoleLabel } from '@/services/userRepository';
-import { filterVehiclesBySearch } from '@/utils/filterVehicles';
+import { filterVehiclesToday, formatFilterDate, getTodayRange } from '@/utils/filterVehicles';
 
 function typeAccents(colors: AppColors): Record<string, string> {
   return {
@@ -150,20 +149,17 @@ export default function RecordsScreen() {
   const { user, isAdmin, role, isLoading: authLoading } = useAuth();
   const { vehicles, isLoading: vehiclesLoading, isRefreshing, error: vehiclesError, refreshRecords } =
     useVehicles();
-  const [searchQuery, setSearchQuery] = useState('');
+  const todayLabel = useMemo(() => formatFilterDate(getTodayRange().from), []);
 
-  const filteredVehicles = useMemo(
-    () => filterVehiclesBySearch(vehicles, searchQuery),
-    [vehicles, searchQuery],
-  );
+  const dailyVehicles = useMemo(() => filterVehiclesToday(vehicles), [vehicles]);
 
   const counts = useMemo(
     () => ({
-      nuevo: countByType(filteredVehicles, 'nuevo'),
-      usado: countByType(filteredVehicles, 'usado'),
-      redetailing: countByType(filteredVehicles, 'redetailing'),
+      nuevo: countByType(dailyVehicles, 'nuevo'),
+      usado: countByType(dailyVehicles, 'usado'),
+      redetailing: countByType(dailyVehicles, 'redetailing'),
     }),
-    [filteredVehicles],
+    [dailyVehicles],
   );
 
   const isLoading = authLoading || vehiclesLoading;
@@ -180,7 +176,7 @@ export default function RecordsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <FlatList
-        data={filteredVehicles}
+        data={dailyVehicles}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <VehicleCard
@@ -214,7 +210,7 @@ export default function RecordsScreen() {
                 </Text>
                 {isAdmin ? (
                   <Text style={styles.adminBadge}>
-                    All team records · {getRoleLabel(role)}
+                    Team records today · {getRoleLabel(role)}
                   </Text>
                 ) : null}
               </View>
@@ -241,38 +237,26 @@ export default function RecordsScreen() {
               />
             </View>
 
-            <RecordsSearchBar value={searchQuery} onChangeText={setSearchQuery} />
-
             {vehiclesError ? (
               <Text style={styles.errorBanner}>
                 Could not load records: {vehiclesError}
               </Text>
             ) : null}
 
-            <Text style={styles.sectionTitle}>
-              {isAdmin ? 'All records' : 'Recent records'}
+            <Text style={styles.sectionTitle}>Today&apos;s records</Text>
+            <Text style={styles.sectionHint}>
+              {dailyVehicles.length > 0
+                ? `${dailyVehicles.length} registered on ${todayLabel} · tap to view`
+                : `No registrations on ${todayLabel} yet`}
             </Text>
-            {filteredVehicles.length > 0 ? (
-              <Text style={styles.sectionHint}>
-                {searchQuery.trim()
-                  ? `${filteredVehicles.length} match(es) · tap to view`
-                  : 'Tap a record to view details and photos'}
-              </Text>
-            ) : searchQuery.trim() ? (
-              <Text style={styles.sectionHint}>No records match your search</Text>
-            ) : null}
           </>
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="document-text-outline" size={48} color={colors.text.secondary} />
-            <Text style={styles.emptyTitle}>
-              {searchQuery.trim() ? 'No matches' : 'No records yet'}
-            </Text>
+            <Text style={styles.emptyTitle}>No records today</Text>
             <Text style={styles.emptyHint}>
-              {searchQuery.trim()
-                ? 'Try another VIN or model keyword.'
-                : 'Use the Scan tab to create your first inspection record.'}
+              Use the Scan tab to register a vehicle, or Search for records from other dates.
             </Text>
           </View>
         }

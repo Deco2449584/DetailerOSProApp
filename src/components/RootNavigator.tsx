@@ -17,7 +17,7 @@ export function RootNavigator() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="scanner" options={{ presentation: 'card' }} />
+        <Stack.Screen name="scanner/index" options={{ presentation: 'card' }} />
         <Stack.Screen name="vehicle/[id]" options={{ presentation: 'card' }} />
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
