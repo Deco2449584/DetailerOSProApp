@@ -3,12 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,7 +34,9 @@ function typeAccents(colors: AppColors): Record<string, string> {
 }
 
 function countByType(vehicles: Vehicle[], type: VehicleType): number {
-  return vehicles.filter((v) => v.type === type).length;
+  return vehicles.filter((v) =>
+    v.type.split(' + ').map((t) => t.trim()).includes(type),
+  ).length;
 }
 
 function createIndexStyles(colors: AppColors) {

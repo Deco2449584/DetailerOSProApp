@@ -18,6 +18,7 @@ const CSV_HEADERS = [
   'Photos',
   'Operator',
   'Created',
+  'Updated',
 ] as const;
 
 function escapeCsvCell(value: string): string {
@@ -35,6 +36,7 @@ function vehicleToRow(vehicle: Vehicle, typeLabels: Map<string, string>): string
     String(vehicle.imagesUrls.length),
     vehicle.createdByEmail || vehicle.userId,
     formatVehicleDate(vehicle.createdAt),
+    vehicle.updatedAt ? formatVehicleDate(vehicle.updatedAt) : '',
   ];
 }
 
