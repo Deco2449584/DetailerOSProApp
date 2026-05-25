@@ -8,8 +8,14 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // Users can read/write their own profile; admins can read/write any profile
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
+      allow update: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /config/{document=**} {

@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,8 +16,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FineShineLogo } from '@/components/FineShineLogo';
 import { useAuth } from '@/context/AuthContext';
 import { brand } from '@/theme/brand';
-import { colors } from '@/theme/colors';
+import { darkPalette } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
+
+const c = darkPalette;
+
+/** Light surfaces on the sign-in card (always on black brand screen). */
+const loginSurface = {
+  card: '#FFFFFF',
+  input: '#F3F4F6',
+  inputBorder: '#D1D5DB',
+  text: '#111111',
+  textMuted: '#6B7280',
+};
 
 export default function LoginScreen() {
   const { signIn, user, isLoading, isConfigured } = useAuth();
@@ -29,7 +41,7 @@ export default function LoginScreen() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.accent.primary} />
+        <ActivityIndicator size="large" color={c.accent.primary} />
       </View>
     );
   }
@@ -58,25 +70,34 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.accentBar} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <FineShineLogo width={220} />
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.brandBlock}>
+            <FineShineLogo width={220} variant="onDark" />
+            <Text style={styles.brandName}>{brand.name}</Text>
             <Text style={styles.tagline}>{brand.tagline}</Text>
-            <Text style={styles.subtitle}>{brand.panelTitle}</Text>
+            <Text style={styles.panelTitle}>{brand.panelTitle}</Text>
           </View>
 
           <View style={styles.card}>
+            <View style={styles.cardAccent} />
+            <Text style={styles.cardTitle}>Sign in</Text>
+            <Text style={styles.cardHint}>Use your Fine Shine operator credentials</Text>
+
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
               placeholder="tu@fineshine.com.au"
-              placeholderTextColor={colors.text.onSurfaceMuted}
+              placeholderTextColor={loginSurface.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -89,7 +110,7 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              placeholderTextColor={colors.text.onSurfaceMuted}
+              placeholderTextColor={loginSurface.textMuted}
               secureTextEntry
               editable={!isSubmitting}
             />
@@ -111,7 +132,7 @@ export default function LoginScreen() {
               onPress={handleSignIn}
               disabled={isSubmitting || !isConfigured}>
               {isSubmitting ? (
-                <ActivityIndicator color={colors.text.onAccent} />
+                <ActivityIndicator color={c.text.onAccent} />
               ) : (
                 <Text style={styles.buttonText}>Sign In</Text>
               )}
@@ -119,7 +140,7 @@ export default function LoginScreen() {
           </View>
 
           <Text style={styles.license}>{brand.license}</Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -130,77 +151,118 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background.primary,
+    backgroundColor: c.background.primary,
   },
   safe: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: c.background.primary,
+  },
+  accentBar: {
+    height: 4,
+    backgroundColor: c.accent.primary,
+    width: '100%',
   },
   flex: {
     flex: 1,
   },
-  container: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    gap: 28,
+    paddingVertical: 28,
+    gap: 32,
   },
-  header: {
+  brandBlock: {
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  brandName: {
+    fontFamily: fonts.heading,
+    fontSize: 24,
+    color: c.text.primary,
+    letterSpacing: 0.5,
+    marginTop: 12,
   },
   tagline: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.body,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: c.text.secondary,
     textAlign: 'center',
   },
-  subtitle: {
-    fontFamily: fonts.headingSemiBold,
-    fontSize: 18,
-    color: colors.text.primary,
+  panelTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: c.text.mutedOnDark,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: colors.surface.elevated,
-    borderRadius: 16,
+    backgroundColor: loginSurface.card,
+    borderRadius: 18,
     padding: 24,
-    gap: 12,
-    borderTopWidth: 4,
-    borderTopColor: colors.accent.primary,
+    gap: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 14,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: c.accent.primary,
+  },
+  cardTitle: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 20,
+    color: loginSurface.text,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  cardHint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: loginSurface.textMuted,
+    marginBottom: 8,
   },
   label: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 14,
-    color: colors.text.onSurface,
+    fontSize: 13,
+    color: loginSurface.text,
     marginTop: 4,
   },
   input: {
-    backgroundColor: colors.surface.default,
+    backgroundColor: loginSurface.input,
     borderWidth: 1,
-    borderColor: colors.border.onSurface,
+    borderColor: loginSurface.inputBorder,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
     fontFamily: fonts.body,
-    color: colors.text.onSurface,
+    color: loginSurface.text,
   },
   error: {
-    color: colors.semantic.error,
+    color: c.semantic.error,
     fontFamily: fonts.body,
     fontSize: 14,
     marginTop: 4,
   },
   button: {
     marginTop: 8,
-    backgroundColor: colors.accent.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: c.accent.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   buttonPressed: {
-    backgroundColor: colors.accent.primaryPressed,
+    backgroundColor: c.accent.primaryPressed,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -208,13 +270,13 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: fonts.headingSemiBold,
     fontSize: 16,
-    color: colors.text.onAccent,
+    color: c.text.onAccent,
     letterSpacing: 0.5,
   },
   license: {
     fontFamily: fonts.body,
     fontSize: 11,
-    color: colors.text.secondary,
+    color: c.text.secondary,
     textAlign: 'center',
     lineHeight: 16,
   },

@@ -36,6 +36,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.background.primary },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Records' }} />
+      <Tabs.Screen name="search" options={{ title: 'Search' }} />
       <Tabs.Screen
         name="scan"
         options={{ title: 'Scan' }}
