@@ -1,5 +1,16 @@
-import { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
+import { User, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import {
+    collection,
+    deleteDoc,
+    doc,
+    getDoc,
+    getDocs,
+    orderBy,
+    query,
+    setDoc,
+    updateDoc,
+} from 'firebase/firestore';
 
 import { db } from '@/services/firebaseConfig';
 import type { UserProfile, UserRole } from '@/types/auth';
@@ -114,4 +125,90 @@ export async function fetchUserProfile(uid: string): Promise<UserProfile | null>
 
 export function getRoleLabel(role: UserRole): string {
   return role === 'admin' ? 'Administrator' : 'Operator';
+}
+
+export type ManagedUser = {
+  uid: string;
+  email: string;
+  role: UserRole;
+  updatedAt: string;
+};
+
+/** Fetch all user profiles (admin only — requires Firestore rules to allow). */
+export async function fetchAllUsers(): Promise<ManagedUser[]> {
+  if (!db) return [];
+
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, USERS_COLLECTION), orderBy('email')),
+    );
+    return snapshot.docs.map((d) => {
+      const data = d.data() as UserProfile;
+      return {
+        uid: d.id,
+        email: data.email ?? '',
+        role: data.role === 'admin' ? 'admin' : 'operator',
+        updatedAt: data.updatedAt ?? '',
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Update the role of an existing user profile. */
+export async function updateUserRole(uid: string, role: UserRole): Promise<void> {
+  if (!db) throw new Error('Firestore is not configured.');
+  await updateDoc(doc(db, USERS_COLLECTION, uid), {
+    role,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/** Delete a user profile document from Firestore. */
+export async function deleteUserProfile(uid: string): Promise<void> {
+  if (!db) throw new Error('Firestore is not configured.');
+  await deleteDoc(doc(db, USERS_COLLECTION, uid));
+}
+
+/**
+ * Create a new Firebase Auth user + Firestore profile using a secondary
+ * Firebase App instance so the admin session is not affected.
+ */
+export async function createManagedUser(
+  email: string,
+  password: string,
+  role: UserRole,
+): Promise<ManagedUser> {
+  if (!db) throw new Error('Firestore is not configured.');
+
+  // Use a secondary app so the current admin session is preserved
+  const secondaryAppName = '__user_creation__';
+  const existingApps = getApps();
+  const secondaryApp =
+    existingApps.find((a) => a.name === secondaryAppName) ??
+    initializeApp(
+      {
+        apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',
+        authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+        projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? '',
+        storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
+        appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
+      },
+      secondaryAppName,
+    );
+
+  const secondaryAuth = getAuth(secondaryApp);
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, email.trim(), password);
+  const uid = credential.user.uid;
+
+  // Sign out from secondary app immediately
+  await secondaryAuth.signOut();
+
+  const now = new Date().toISOString();
+  const profile: UserProfile = { email: email.trim(), role, updatedAt: now };
+  await setDoc(doc(db, USERS_COLLECTION, uid), profile);
+
+  return { uid, email: email.trim(), role, updatedAt: now };
 }

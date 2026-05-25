@@ -1,15 +1,14 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { AppColors } from '@/theme/palettes';
 
-type OptionGroupProps<T extends string> = {
+type ColorPickerCarouselProps = {
   label: string;
-  options: readonly T[];
-  value: T;
-  onChange: (value: T) => void;
-  getLabel?: (option: T) => string;
+  options: readonly string[];
+  value: string;
+  onChange: (value: string) => void;
 };
 
 function createStyles(colors: AppColors, isDark: boolean) {
@@ -22,15 +21,15 @@ function createStyles(colors: AppColors, isDark: boolean) {
       fontWeight: '600',
       color: colors.text.onSurface,
     },
-    options: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    scrollContent: {
       gap: 8,
+      paddingVertical: 2,
     },
     chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
+      maxWidth: 160,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: colors.border.onSurface,
       backgroundColor: isDark ? colors.surface.muted : colors.surface.default,
@@ -51,20 +50,22 @@ function createStyles(colors: AppColors, isDark: boolean) {
   });
 }
 
-export function OptionGroup<T extends string>({
+export function ColorPickerCarousel({
   label,
   options,
   value,
   onChange,
-  getLabel = (option) => option,
-}: OptionGroupProps<T>) {
+}: ColorPickerCarouselProps) {
   const { isDark } = useTheme();
   const styles = useThemedStyles((colors) => createStyles(colors, isDark));
 
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.options}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
         {options.map((option) => {
           const selected = value === option;
           return (
@@ -72,13 +73,13 @@ export function OptionGroup<T extends string>({
               key={option}
               style={[styles.chip, selected && styles.chipSelected]}
               onPress={() => onChange(option)}>
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                {getLabel(option)}
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]} numberOfLines={2}>
+                {option}
               </Text>
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }

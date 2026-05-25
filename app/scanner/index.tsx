@@ -1,38 +1,68 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ColorPickerCarousel } from '@/components/ColorPickerCarousel';
 import { EvidencePhotosField } from '@/components/EvidencePhotosField';
+import { InfoModal } from '@/components/InfoModal';
 import { OptionGroup } from '@/components/OptionGroup';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useVehicleCatalog } from '@/context/VehicleCatalogContext';
 import { useVehicles } from '@/context/VehiclesContext';
-import type { Vehicle } from '@/types';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { brand } from '@/theme/brand';
-import { colors } from '@/theme/colors';
+import type { AppColors } from '@/theme/palettes';
 import { fonts } from '@/theme/typography';
+import type { Vehicle } from '@/types';
 import { normalizeVin } from '@/utils/vin';
+
+type FormMode = 'create' | 'admin-edit' | 'append';
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createScannerStyles);
+  const { editId, appendId } = useLocalSearchParams<{ editId?: string; appendId?: string }>();
+  const { isAdmin } = useAuth();
   const { catalog, isLoading: catalogLoading, getTypeLabel } = useVehicleCatalog();
-  const { findByVin, addVehicle, updateVehicleById } = useVehicles();
+  const {
+    vehicles,
+    isLoading: vehiclesLoading,
+    findByVin,
+    lookupVehicleByVin,
+    addVehicle,
+    updateVehicleById,
+    appendVehicleById,
+  } = useVehicles();
   const [permission, requestPermission] = useCameraPermissions();
+  const scanHandledRef = useRef<string | null>(null);
 
   const [isScanning, setIsScanning] = useState(true);
+  const [isResolvingVin, setIsResolvingVin] = useState(false);
   const [scannedVin, setScannedVin] = useState<string | null>(null);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [formMode, setFormMode] = useState<FormMode>('create');
+  const [existingComments, setExistingComments] = useState('');
+  const [lockedPhotoUris, setLockedPhotoUris] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [vinModalVisible, setVinModalVisible] = useState(false);
+  const [vinModalModel, setVinModalModel] = useState('');
 
   const [model, setModel] = useState('');
   const [type, setType] = useState('');
@@ -41,11 +71,11 @@ export default function ScannerScreen() {
   const [evidencePhotos, setEvidencePhotos] = useState<string[]>([]);
 
   useEffect(() => {
-    if (catalogLoading) return;
+    if (catalogLoading || formMode !== 'create') return;
     if (!model && catalog.models[0]) setModel(catalog.models[0]);
     if (!type && catalog.types[0]) setType(catalog.types[0].value);
     if (!vehicleColor && catalog.colors[0]) setVehicleColor(catalog.colors[0]);
-  }, [catalogLoading, catalog, model, type, vehicleColor]);
+  }, [catalogLoading, catalog, model, type, vehicleColor, formMode]);
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -60,10 +90,16 @@ export default function ScannerScreen() {
     setComments('');
     setEvidencePhotos([]);
     setEditingVehicleId(null);
+    setFormMode('create');
+    setExistingComments('');
+    setLockedPhotoUris([]);
   }, [catalog]);
 
-  const loadVehicleForEdit = useCallback((vehicle: Vehicle) => {
+  const loadVehicleForAdminEdit = useCallback((vehicle: Vehicle) => {
+    setFormMode('admin-edit');
     setEditingVehicleId(vehicle.id);
+    setExistingComments('');
+    setLockedPhotoUris([]);
     setScannedVin(vehicle.vin);
     setModel(vehicle.model);
     setType(vehicle.type);
@@ -73,55 +109,92 @@ export default function ScannerScreen() {
     setIsScanning(false);
   }, []);
 
-  const promptDuplicateVin = useCallback(
-    (vin: string, existing: Vehicle) => {
-      Alert.alert(
-        'VIN already registered',
-        `This VIN is already in the system (${existing.model}). Do you want to modify the existing record?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              setIsScanning(true);
-              setScannedVin(null);
-              resetFormDefaults();
-            },
-          },
-          {
-            text: 'Modify',
-            onPress: () => loadVehicleForEdit(existing),
-          },
-        ],
-      );
-    },
-    [loadVehicleForEdit, resetFormDefaults],
-  );
+  const loadVehicleForAppend = useCallback((vehicle: Vehicle) => {
+    setFormMode('append');
+    setEditingVehicleId(vehicle.id);
+    setExistingComments(vehicle.comments);
+    setLockedPhotoUris([...vehicle.imagesUrls]);
+    setScannedVin(vehicle.vin);
+    setModel(vehicle.model);
+    setType('');                        // blank = no type change
+    setVehicleColor(vehicle.color);
+    setComments('');
+    setEvidencePhotos(vehicle.imagesUrls);
+    setIsScanning(false);
+  }, []);
+
+  useEffect(() => {
+    if (!editId || vehiclesLoading) return;
+    if (!isAdmin) {
+      Alert.alert('Not allowed', 'Only administrators can edit vehicle details.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+      return;
+    }
+    const existing = vehicles.find((vehicle) => vehicle.id === editId);
+    if (existing) {
+      loadVehicleForAdminEdit(existing);
+    }
+  }, [editId, isAdmin, vehicles, vehiclesLoading, loadVehicleForAdminEdit, router]);
+
+  useEffect(() => {
+    if (!appendId || vehiclesLoading) return;
+    const existing = vehicles.find((vehicle) => vehicle.id === appendId);
+    if (existing) {
+      loadVehicleForAppend(existing);
+    }
+  }, [appendId, vehicles, vehiclesLoading, loadVehicleForAppend]);
 
   const handleBarcodeScanned = useCallback(
-    ({ data }: BarcodeScanningResult) => {
-      if (!isScanning || !data) return;
+    async ({ data }: BarcodeScanningResult) => {
+      if (!isScanning || !data || isResolvingVin) return;
 
       const vin = normalizeVin(data);
-      const existing = findByVin(vin);
+      if (scanHandledRef.current === vin) return;
+      scanHandledRef.current = vin;
 
-      if (existing) {
-        promptDuplicateVin(vin, existing);
-        return;
-      }
-
-      setScannedVin(vin);
-      setEditingVehicleId(null);
+      setIsResolvingVin(true);
       setIsScanning(false);
+
+      try {
+        const existing = await lookupVehicleByVin(vin);
+        if (existing) {
+          loadVehicleForAppend(existing);
+          setVinModalModel(existing.model);
+          setVinModalVisible(true);
+          return;
+        }
+
+        resetFormDefaults();
+        setScannedVin(vin);
+        setFormMode('create');
+        setExistingComments('');
+      } catch {
+        Alert.alert('Error', 'Could not verify this VIN. Please try again.');
+        setIsScanning(true);
+        setScannedVin(null);
+        scanHandledRef.current = null;
+      } finally {
+        setIsResolvingVin(false);
+      }
     },
-    [isScanning, findByVin, promptDuplicateVin],
+    [isScanning, isResolvingVin, lookupVehicleByVin, loadVehicleForAppend, resetFormDefaults],
   );
 
   const handleScanAgain = () => {
+    scanHandledRef.current = null;
     setScannedVin(null);
     setIsScanning(true);
     resetFormDefaults();
   };
+
+  const existingForVin = useMemo(
+    () => (scannedVin ? findByVin(scannedVin) : null),
+    [scannedVin, findByVin, vehicles],
+  );
+
+  const effectiveMode: FormMode =
+    formMode === 'admin-edit' ? 'admin-edit' : existingForVin ? 'append' : formMode;
 
   const handleSave = async () => {
     if (!scannedVin?.trim() || isSaving) return;
@@ -136,13 +209,27 @@ export default function ScannerScreen() {
 
     setIsSaving(true);
     try {
-      if (editingVehicleId) {
+      const appendTargetId = editingVehicleId ?? existingForVin?.id;
+      if (effectiveMode === 'append' && appendTargetId) {
+        await appendVehicleById(appendTargetId, {
+          additionalComments: comments,
+          imagesUrls: evidencePhotos,
+          newType: type || undefined,
+        });
+      } else if (effectiveMode === 'admin-edit' && editingVehicleId) {
+        if (!isAdmin) {
+          Alert.alert('Not allowed', 'Only administrators can edit vehicle details.');
+          setIsSaving(false);
+          return;
+        }
         await updateVehicleById(editingVehicleId, payload);
       } else {
-        const duplicate = findByVin(scannedVin);
+        const duplicate = await lookupVehicleByVin(scannedVin);
         if (duplicate) {
           setIsSaving(false);
-          promptDuplicateVin(scannedVin, duplicate);
+          loadVehicleForAppend(duplicate);
+          setVinModalModel(duplicate.model);
+          setVinModalVisible(true);
           return;
         }
 
@@ -155,9 +242,11 @@ export default function ScannerScreen() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
       if (message === 'DUPLICATE_VIN') {
-        const duplicate = findByVin(scannedVin);
+        const duplicate = await lookupVehicleByVin(scannedVin);
         if (duplicate) {
-          promptDuplicateVin(scannedVin, duplicate);
+          loadVehicleForAppend(duplicate);
+          setVinModalModel(duplicate.model);
+          setVinModalVisible(true);
         } else {
           Alert.alert('Duplicate VIN', 'This VIN is already registered.');
         }
@@ -197,8 +286,17 @@ export default function ScannerScreen() {
 
   const showForm = !isScanning && scannedVin !== null;
 
+  const formTitle =
+    effectiveMode === 'admin-edit'
+      ? 'Edit inspection'
+      : effectiveMode === 'append'
+        ? 'Add to existing record'
+        : 'New inspection';
+
+  const formBottomPadding = Math.max(insets.bottom, 16) + 24;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
       {isScanning ? (
         <View style={styles.cameraContainer}>
           <CameraView
@@ -208,12 +306,15 @@ export default function ScannerScreen() {
             onBarcodeScanned={handleBarcodeScanned}
           />
           <View style={styles.overlay}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← Back</Text>
-            </Pressable>
-            <Text style={styles.scanTitle}>Scan VIN (QR)</Text>
+            <ScreenHeader
+              variant="overlay"
+              title="Scan VIN"
+              subtitle={`${brand.name} · Point at QR code`}
+              onBack={() => router.back()}
+              backLabel="Back"
+            />
             <Text style={styles.scanHint}>
-              {brand.name} · Point at the vehicle QR code
+              Align the QR code inside the frame
             </Text>
             <View style={styles.frameContainer}>
               <View style={styles.frame}>
@@ -223,98 +324,181 @@ export default function ScannerScreen() {
                 <View style={[styles.corner, styles.cornerBR]} />
               </View>
             </View>
+            {isResolvingVin ? (
+              <View style={styles.resolvingOverlay}>
+                <ActivityIndicator size="large" color={colors.accent.primary} />
+                <Text style={styles.resolvingText}>Checking VIN...</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       ) : showForm ? (
-        <ScrollView
-          contentContainerStyle={styles.formContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Pressable style={styles.backButtonForm} onPress={() => router.back()}>
-            <Text style={styles.backButtonFormText}>← Back to panel</Text>
-          </Pressable>
+        <>
+          <ScreenHeader
+            title={formTitle}
+            subtitle={scannedVin ?? undefined}
+            onBack={() => router.back()}
+            backLabel="Records"
+          />
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
+            <ScrollView
+              contentContainerStyle={[styles.formContent, { paddingBottom: formBottomPadding }]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+            {effectiveMode === 'append' ? (
+              <Text style={styles.formHint}>
+                Add a new service type (optional), comments or photos below.
+              </Text>
+            ) : null}
 
-          <Text style={styles.formTitle}>
-            {editingVehicleId ? 'Modify inspection' : 'Vehicle inspection'}
-          </Text>
-
-          <View style={styles.vinBox}>
-            <Text style={styles.vinLabel}>Scanned VIN</Text>
-            <TextInput
-              style={styles.vinInput}
-              value={scannedVin}
-              editable={false}
-              selectTextOnFocus
-            />
-          </View>
-
-          <View style={styles.formCard}>
-            <OptionGroup
-              label="Model"
-              options={catalog.models}
-              value={model}
-              onChange={setModel}
-            />
-
-            <OptionGroup
-              label="Type"
-              options={catalog.types.map((item) => item.value)}
-              value={type}
-              onChange={setType}
-              getLabel={(option) => getTypeLabel(option)}
-            />
-
-            <OptionGroup
-              label="Official Tesla colour"
-              options={catalog.colors}
-              value={vehicleColor}
-              onChange={setVehicleColor}
-            />
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabelDark}>Comments</Text>
-            <TextInput
-              style={styles.commentsInput}
-              value={comments}
-              onChangeText={setComments}
-              placeholder="Inspection notes..."
-              placeholderTextColor={colors.text.onSurfaceMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={styles.vinBox}>
+              <Text style={styles.vinLabel}>VIN</Text>
+              <TextInput
+                style={styles.vinInput}
+                value={scannedVin}
+                editable={false}
+                selectTextOnFocus
+              />
             </View>
 
-            <EvidencePhotosField photos={evidencePhotos} onChange={setEvidencePhotos} />
-          </View>
+            <View style={styles.formCard}>
+              {effectiveMode === 'append' ? (
+                <View style={styles.readOnlyBlock}>
+                  <Text style={styles.readOnlyLabel}>Model</Text>
+                  <Text style={styles.readOnlyValue}>{model}</Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (pressed || isSaving) && styles.primaryButtonPressed,
-              isSaving && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSave}
-            disabled={isSaving}>
-            {isSaving ? (
-              <ActivityIndicator color={colors.text.onAccent} />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                {editingVehicleId ? 'Update record' : 'Save & Continue'}
-              </Text>
-            )}
-          </Pressable>
+                  {/* Type history chain */}
+                  <Text style={styles.readOnlyLabel}>Service history</Text>
+                  <Text style={styles.typeChain}>
+                    {existingForVin?.type ?? (editingVehicleId
+                      ? vehicles.find(v => v.id === editingVehicleId)?.type
+                      : '') ?? ''}
+                    {type ? (
+                      <Text style={styles.typeChainNew}>{`  +  ${getTypeLabel(type)}`}</Text>
+                    ) : null}
+                  </Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.secondaryButtonPressed,
-            ]}
-            onPress={handleScanAgain}>
-            <Text style={styles.secondaryButtonText}>Scan again</Text>
-          </Pressable>
-        </ScrollView>
+                  {/* New type selector */}
+                  <OptionGroup
+                    label="Add service type (optional)"
+                    options={['', ...catalog.types.map((item) => item.value)]}
+                    value={type}
+                    onChange={setType}
+                    getLabel={(option) => option === '' ? '— No change —' : getTypeLabel(option)}
+                  />
+
+                  <Text style={styles.readOnlyLabel}>Colour</Text>
+                  <Text style={styles.readOnlyValue}>{vehicleColor}</Text>
+                  {existingComments.trim() ? (
+                    <>
+                      <Text style={styles.readOnlyLabel}>Previous comments</Text>
+                      <Text style={styles.readOnlyComments}>{existingComments}</Text>
+                    </>
+                  ) : null}
+                </View>
+              ) : (
+                <>
+                  <OptionGroup
+                    label="Model"
+                    options={catalog.models}
+                    value={model}
+                    onChange={setModel}
+                  />
+
+                  <OptionGroup
+                    label="Type"
+                    options={catalog.types.map((item) => item.value)}
+                    value={type}
+                    onChange={setType}
+                    getLabel={(option) => getTypeLabel(option)}
+                  />
+
+                  <ColorPickerCarousel
+                    label="Official Tesla colour"
+                    options={catalog.colors}
+                    value={vehicleColor}
+                    onChange={setVehicleColor}
+                  />
+                </>
+              )}
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabelDark}>
+                  {effectiveMode === 'append' ? 'Additional comments' : 'Comments'}
+                </Text>
+                <TextInput
+                  style={styles.commentsInput}
+                  value={comments}
+                  onChangeText={setComments}
+                  placeholder={
+                    effectiveMode === 'append'
+                      ? 'New inspection notes...'
+                      : 'Inspection notes...'
+                  }
+                  placeholderTextColor={colors.text.onSurfaceMuted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <EvidencePhotosField
+                photos={evidencePhotos}
+                onChange={setEvidencePhotos}
+                isAdmin={isAdmin}
+                lockedPhotoUris={
+                  !isAdmin && effectiveMode === 'append' ? lockedPhotoUris : []
+                }
+              />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                (pressed || isSaving) && styles.primaryButtonPressed,
+                isSaving && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleSave}
+              disabled={isSaving}>
+              {isSaving ? (
+                <ActivityIndicator color={colors.text.onAccent} />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {effectiveMode === 'append'
+                    ? 'Save update'
+                    : effectiveMode === 'admin-edit'
+                      ? 'Update record'
+                      : 'Save & Continue'}
+                </Text>
+              )}
+            </Pressable>
+
+            {effectiveMode === 'create' ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.secondaryButtonPressed,
+                ]}
+                onPress={handleScanAgain}>
+                <Text style={styles.secondaryButtonText}>Scan again</Text>
+              </Pressable>
+            ) : null}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </>
       ) : null}
+
+      <InfoModal
+        visible={vinModalVisible}
+        icon="car-outline"
+        title="VIN already registered"
+        message={`${vinModalModel ? `${vinModalModel} is` : 'This vehicle is'} already in the system. You can add a new service type, comments or photos below.`}
+        confirmLabel="Continue"
+        onConfirm={() => setVinModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -323,7 +507,11 @@ const FRAME_SIZE = 260;
 const CORNER_SIZE = 28;
 const CORNER_WIDTH = 4;
 
-const styles = StyleSheet.create({
+function createScannerStyles(colors: AppColors) {
+  return StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   safe: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -343,30 +531,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  backButtonText: {
-    color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scanTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 22,
-    color: colors.text.primary,
-    marginBottom: 8,
   },
   scanHint: {
     fontSize: 14,
-    color: colors.text.secondary,
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    paddingHorizontal: 24,
+    fontFamily: fonts.body,
   },
   frameContainer: {
     flex: 1,
@@ -429,21 +601,49 @@ const styles = StyleSheet.create({
   },
   formContent: {
     padding: 20,
-    paddingBottom: 40,
-    gap: 20,
+    paddingTop: 8,
+    gap: 16,
   },
-  backButtonForm: {
-    alignSelf: 'flex-start',
+  formHint: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
   },
-  backButtonFormText: {
-    fontSize: 15,
+  readOnlyBlock: {
+    gap: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.onSurface,
+    marginBottom: 4,
+  },
+  readOnlyLabel: {
+    fontSize: 11,
     fontWeight: '600',
-    color: colors.accent.primary,
+    color: colors.text.onSurfaceMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: 4,
   },
-  formTitle: {
-    fontSize: 24,
+  readOnlyValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.onSurface,
+  },
+  readOnlyComments: {
+    fontSize: 14,
+    color: colors.text.onSurfaceMuted,
+    lineHeight: 20,
+  },
+  typeChain: {
+    fontSize: 16,
     fontWeight: '700',
-    color: colors.text.primary,
+    color: colors.text.onSurface,
+    lineHeight: 22,
+  },
+  typeChainNew: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.accent.primary,
   },
   vinBox: {
     gap: 6,
@@ -456,7 +656,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   vinInput: {
-    backgroundColor: colors.surface.elevated,
+    backgroundColor: colors.surface.card,
     borderWidth: 2,
     borderColor: colors.accent.primary,
     borderRadius: 10,
@@ -471,10 +671,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   formCard: {
-    backgroundColor: colors.surface.elevated,
+    backgroundColor: colors.surface.card,
     borderRadius: 16,
     padding: 16,
     gap: 20,
+    borderWidth: 1,
+    borderColor: colors.border.onSurface,
+  },
+  resolvingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  resolvingText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
   },
   fieldLabelDark: {
     fontSize: 14,
@@ -482,7 +696,7 @@ const styles = StyleSheet.create({
     color: colors.text.onSurface,
   },
   commentsInput: {
-    backgroundColor: colors.surface.elevated,
+    backgroundColor: colors.background.secondary,
     borderWidth: 1,
     borderColor: colors.border.onSurface,
     borderRadius: 10,
@@ -525,4 +739,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.secondary,
   },
-});
+  });
+}
